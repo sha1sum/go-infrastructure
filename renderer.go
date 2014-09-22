@@ -76,7 +76,7 @@ func render(
 	data interface{}) (body []byte, err error) {
 
 	// Relative path to the actual view file
-	file := "web-src/html/" + name + ".html"
+	file := "web-src/html/view/" + name + ".html"
 	// Parse our view
 	view, err := parse(req, file, data)
 	if err != nil {
@@ -84,7 +84,7 @@ func render(
 	}
 
 	// Parse the layout
-	body, err = parse(req, "web-src/html/layout-"+layout+".html", map[string]template.HTML{
+	body, err = parse(req, "web-src/html/layout/"+layout+".html", map[string]template.HTML{
 		"Content": template.HTML(view),
 	})
 	if err != nil {
