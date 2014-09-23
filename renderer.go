@@ -112,7 +112,7 @@ func parse(
 
 		// Enhance our template with custom format so we can reuse with
 		// underscore
-		t.Delims("<%=", ">")
+		// t.Delims("<%=", ">")
 		_, err = t.ParseFiles(file)
 		if err != nil {
 			return
