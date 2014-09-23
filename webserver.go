@@ -45,7 +45,7 @@ func NewWebserver(handlers []*handler.Handler) *webserver {
 	}
 
 	// Register some static asset routes to serve files from the applications
-	ws.Mux.PathPrefix("/cdn/").Handler(http.FileServer(http.Dir("./cdn/")))
+	ws.Mux.PathPrefix("/cdn/").Handler(http.FileServer(http.Dir("./")))
 
 	return ws
 }
