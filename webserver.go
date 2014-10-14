@@ -47,7 +47,15 @@ func NewWebserver(handlers []*handler.Handler) *webserver {
 	// Register some static asset routes to serve files from the applications
 	ws.Mux.PathPrefix("/cdn/").Handler(http.FileServer(http.Dir("./")))
 
+	r.NotFoundHandler = http.HandlerFunc(notFound)
+
 	return ws
+}
+
+// ServeHTTP sends our 404 response to the client
+func notFound(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(404)
+	w.Write([]byte("FourOhFour! What have you done?!?!?"))
 }
 
 // ServeHTTP handles all requests of our web server and delegates to the
@@ -103,14 +111,4 @@ func (ws *webserver) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// Write the original body provided by the handler to the ResponseWriter
 	w.Write(rec.Body.Bytes())
-}
-
-// NotFound is responsible for execution when we can't match the provided
-// request path to a handler.
-type NotFound struct{}
-
-// ServeHTTP sends our 404 response to the client
-func (h *NotFound) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(404)
-	w.Write([]byte("FourOhFour! What have you done?!?!?"))
 }
