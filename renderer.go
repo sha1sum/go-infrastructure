@@ -29,8 +29,32 @@ func init() {
 	r.templates = make(map[string]*template.Template)
 }
 
-// RenderLayoutHTML renders a layout and embeds a view within that layout.
-func RenderLayoutHTML(
+// RenderView renders a HTML view.
+func RenderView(
+	resp http.ResponseWriter,
+	req *http.Request,
+	view string,
+	data interface{}) (err error) {
+
+	// Attempt to render the view using our private render method
+	// Relative path to the actual view file
+	file := "web-src/html/view/" + view + ".html"
+	// Parse our view
+	body, err := parse(req, file, data)
+
+	if err != nil {
+		// Render a standard error from the HTTP library
+		http.Error(resp, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	// Write the response
+	resp.Write(body)
+
+	return
+}
+
+// RenderLayout renders a layout and embeds a view within that layout.
+func RenderLayout(
 	resp http.ResponseWriter,
 	req *http.Request,
 	layout string,
@@ -77,6 +101,7 @@ func render(
 
 	// Relative path to the actual view file
 	file := "web-src/html/view/" + name + ".html"
+
 	// Parse our view
 	view, err := parse(req, file, data)
 	if err != nil {
