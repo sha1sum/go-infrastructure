@@ -1,21 +1,72 @@
 // Package webserver is responsible for web server operations including creating
-// new web servers, serving static files, and rendering and caching templates.
+// new web servers, registering handlers, and rendering and caching templates.
 // One might think of this package as our own web framework that uses conventions
 // to consistently work across products and projects.
 package webserver
 
-import (
-	"log"
-	"net/http"
-	"net/http/httptest"
-	"path"
-	"strconv"
+import "sync"
 
-	"git.wreckerlabs.com/in/handler"
-
-	"github.com/gorilla/mux" // Pattern matching and web handler execution
+const (
+	// MIMEJSON represents the standard classification for data encoded as JSON.
+	MIMEJSON = "application/json"
+	// MIMEHTML represents the standard classification for HTML web pages.
+	MIMEHTML = "text/html"
+	// MIMEXML represents the standard classification for data encoded as XML.
+	MIMEXML = "application/xml"
+	// MIMEXMLTEXT represents the standard classification for a XML text document.
+	MIMEXMLTEXT = "text/xml"
+	// MIMEPLAIN represents the standard classification for plain text data without
+	// any encoded format and is generally human readable text data.
+	MIMEPLAIN = "text/plain"
+	// MIMEFORM represents form data encoded by a Web browser posted to a server.
+	MIMEFORM = "application/x-www-form-urlencoded"
+	// MIMECSS represents the standard classificaton for Cascading Style Sheets.
+	MIMECSS = "text/css"
+	// MIMEJS represents the standard classification for JavaScript.
+	MIMEJS = "application/javascript"
+	// MIMEPNG represents the standard classificaton for PNG images.
+	MIMEPNG = "image/png"
+	// MIMEJPEG represents the standard classificaton for JPEG/JPG images.
+	MIMEJPEG = "image/jpeg"
+	// MIMEGIF represents the standard classificaton for GIF images.
+	MIMEGIF = "image/gif"
+	// MIMEXICON represents the proposed classification for icons such as favicon images
+	MIMEXICON = "image/x-icon"
 )
 
+type (
+	// Handler is a request event handler
+	Handler func(*RequestContext)
+
+	// RouteNamespace groups routes according to a specific URL entry point or prefix.
+	RouteNamespace struct {
+		Handlers []Handler
+		prefix   string
+		parent   *RouteNamespace
+		server   *Server
+	}
+
+	// Server represents an instance of the webserver.
+	Server struct {
+		*RouteNamespace
+		eventPool sync.Pool // Manage our RequestContext event pool
+	}
+)
+
+// New returns a new WebServer
+func New() *Server {
+	ws := &Server{}
+	// Setup an initial route namespace
+	ws.RouteNamespace = &RouteNamespace{
+		Handlers: nil,
+		prefix:   "/",
+		parent:   nil,
+		server:   ws}
+
+	return ws
+}
+
+/*
 type (
 	// Webserver is a functional webserver that a main program can use with the
 	// standard http package to serve traffic
@@ -69,7 +120,7 @@ func (ws *webserver) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// tend to do for second+ requests of the static assets. As a quick fix we
 	// will keep things simple and use a real response writer and avoid our
 	// lifecycle for static assets.
-	isCDN, pathError := path.Match("/cdn/*/*", r.URL.Path)
+	isCDN, pathError := path.Match("/cdn/ * / *", r.URL.Path)
 	if pathError != nil {
 		log.Fatal(pathError)
 		isCDN = false
@@ -112,3 +163,4 @@ func (ws *webserver) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Write the original body provided by the handler to the ResponseWriter
 	w.Write(rec.Body.Bytes())
 }
+*/
