@@ -16,6 +16,9 @@ var _ = Describe("Webserver", func() {
 			It("should have no handlers defined", func() {
 				Expect(len(ws.Handlers)).To(Equal(0))
 			})
+			It("should have a root RouteNamespace", func() {
+				Expect(ws.Prefix).To(Equal("/"))
+			})
 		})
 	})
 })

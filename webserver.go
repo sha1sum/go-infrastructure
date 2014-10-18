@@ -4,7 +4,15 @@
 // to consistently work across products and projects.
 package webserver
 
-import "sync"
+import (
+	"fmt"
+	"net/http"
+	"path"
+	"sync"
+	"time"
+
+	"github.com/julienschmidt/httprouter"
+)
 
 const (
 	// MIMEJSON represents the standard classification for data encoded as JSON.
@@ -34,13 +42,18 @@ const (
 	MIMEXICON = "image/x-icon"
 )
 
+var (
+	// Debug flag to output debug messages to the console
+	Debug = true
+)
+
 type (
-	// Handler is a request event handler
-	Handler func(*RequestContext)
+	// HandlerFunc is a request event handler
+	HandlerFunc func(*Event)
 
 	// RouteNamespace groups routes according to a specific URL entry point or prefix.
 	RouteNamespace struct {
-		Handlers []Handler
+		Handlers []HandlerFunc
 		prefix   string
 		parent   *RouteNamespace
 		server   *Server
@@ -49,21 +62,95 @@ type (
 	// Server represents an instance of the webserver.
 	Server struct {
 		*RouteNamespace
-		eventPool sync.Pool // Manage our RequestContext event pool
+		contextPool    sync.Pool          // Manage our RequestContext event pool
+		router         *httprouter.Router // Delegate to the httprouter package for performant route matching
+		MissingHandler []HandlerFunc
 	}
 )
 
-// New returns a new WebServer
+// New returns a new WebServer.
 func New() *Server {
-	ws := &Server{}
+	s := &Server{}
 	// Setup an initial route namespace
-	ws.RouteNamespace = &RouteNamespace{
+	s.RouteNamespace = &RouteNamespace{
 		Handlers: nil,
 		prefix:   "/",
 		parent:   nil,
-		server:   ws}
+		server:   s}
 
-	return ws
+	s.router = httprouter.New()
+	s.router.NotFound = s.onMissingHandler
+
+	return s
+}
+
+// Start launches the webserver so that it begins listening and serving requests
+// on the desired address.
+func (s *Server) Start(address string) {
+	consolelog("success", "Webserver preparing to listen on "+address)
+
+	if err := http.ListenAndServe(address, s); err != nil {
+		consolelog("fatal", "Webserver unable to listen on "+address)
+		panic(err)
+	}
+}
+
+// ServeHTTP handles all requests of our web server and delegates to the
+// gorilla mux package for routing and actual handler execution.
+func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("Serving a new web request")
+
+	s.router.ServeHTTP(w, r)
+
+	fmt.Println("Concluding a web request")
+}
+
+// captureRequest builds a new Event to model a request/response handled
+// by our Webserver.
+func (s *Server) captureRequest(w http.ResponseWriter, req *http.Request, params httprouter.Params, handlers []HandlerFunc) *Event {
+
+	var startTime = time.Now()
+	var e = new(Event)
+
+	// Note that we've accepted the request for processing
+	e.StatusCode = 202
+	e.StartTime = startTime
+
+	id, err := snowflake.Next()
+	if err != nil {
+		panic("Snowflake failed?")
+	}
+	e.id = id
+
+	return e
+}
+
+// onMissingHandler replies to the request with an HTTP 404 not found error.
+// This function is triggered when we are unable to match a route.
+func (s *Server) onMissingHandler(w http.ResponseWriter, req *http.Request) {
+	rc := s.captureRequest(w, req, nil, s.MissingHandler)
+	rc.StatusCode = 404
+	_, _ = w.Write([]byte("Not Found"))
+	fmt.Println("404: " + req.URL.Path)
+}
+
+/*------------------------------------------------------------------------------
+Route Namespace
+----------------------------------------------------------------------------- */
+
+func (rns *RouteNamespace) buildPath(p string) string {
+	return path.Join(rns.prefix, p)
+}
+
+// Handle registers handlers!
+func (rns *RouteNamespace) Handle(method string, path string, handlers []HandlerFunc) {
+	//p := rns.buildPath(path)
+
+}
+
+// GET is a conveinence method for registering handlers
+func (rns *RouteNamespace) GET(path string, handlers ...HandlerFunc) {
+	rns.Handle("GET", path, handlers)
 }
 
 /*
