@@ -4,13 +4,32 @@
 package main
 
 import (
-	"fmt"
+	"sync"
 
 	"git.wreckerlabs.com/in/webserver"
+)
+
+const (
+	port = "8080"
 )
 
 func main() {
 	ws := webserver.New()
 
-	fmt.Printf("%+v", ws)
+	ws.GET("/", func(event *webserver.Event) {
+		event.SetView("homepage", true, nil)
+	})
+
+	wg := &sync.WaitGroup{}
+
+	// Webserver
+	wg.Add(1)
+	go func() {
+
+		ws.Start(":8081")
+
+		wg.Done()
+	}()
+
+	wg.Wait()
 }
