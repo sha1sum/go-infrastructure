@@ -39,8 +39,6 @@ func eventFactory(start time.Time) *Event {
 	var e = new(Event)
 	e.StartTime = start
 
-	e.StatusCode = 202 // Note that we've accepted the request for processing
-
 	id, err := snowflake.Next()
 	if err != nil {
 		panic("Snowflake failed?")
