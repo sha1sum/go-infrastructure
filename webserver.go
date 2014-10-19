@@ -158,13 +158,9 @@ func (s *Server) onMissingHandler(w http.ResponseWriter, req *http.Request) {
 			log.Printf("webserver.OnMissingHandler failed to render template `%s`", template)
 		}
 		event.Body.Write([]byte(defaultResponse404))
-		w.Write(event.Body.Bytes())
-		//var buf bytes.Buffer
-		//err = defaultResponseTemplate.Execute(event.Body, struct{ Status string }{Status: "404 Not Found"})
-		//if err != nil && Settings.LogErrorMessages {
-		//	panic(err)
-		//}
 	}
+
+	w.Write(event.Body.Bytes())
 }
 
 /***********************************************

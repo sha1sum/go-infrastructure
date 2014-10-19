@@ -19,9 +19,9 @@ func main() {
 	// Enable debugging of the webserver
 	wsconfig := &webserver.Settings
 	// Enable webserver debug logging
-	wsconfig.Debug = true
+	wsconfig.LogDebugMessages = true
 	// Enable renderer debugging logging
-	wsconfig.Render.Debug = true
+	wsconfig.Render.LogDebugMessages = true
 
 	// Example handler
 	ws.GET("/", homeHandler)
