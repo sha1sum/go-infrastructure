@@ -94,6 +94,8 @@ var (
 			"onMissingHandler": "errors/onMissingHandler",
 		},
 	}
+	// If we fail to find a configured onMissingHandler once we will stop looking
+	seekOnMissingHandler = true
 )
 
 // New returns a new WebServer.
@@ -150,13 +152,17 @@ func (s *Server) captureRequest(
 func (s *Server) onMissingHandler(w http.ResponseWriter, req *http.Request) {
 	event := s.captureRequest(w, req, nil, s.MissingHandler)
 	event.StatusCode = http.StatusNotFound
-	template := Settings.SystemTemplates["onMissingHandler"]
 
-	err := event.HTML(template, nil)
-	if err != nil {
-		if Settings.LogErrorMessages {
+	if seekOnMissingHandler {
+		template := Settings.SystemTemplates["onMissingHandler"]
+		err := event.HTML(template, nil)
+		if err != nil {
 			log.Printf("webserver.OnMissingHandler failed to render template `%s`", template)
+			seekOnMissingHandler = false
 		}
+	}
+
+	if !seekOnMissingHandler {
 		event.Body.Write([]byte(defaultResponse404))
 	}
 
