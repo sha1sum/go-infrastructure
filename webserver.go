@@ -5,12 +5,13 @@
 package webserver
 
 import (
-	"fmt"
+	"log"
 	"net/http"
 	"path"
 	"sync"
 	"time"
 
+	"git.wreckerlabs.com/in/webserver/render"
 	"github.com/julienschmidt/httprouter"
 )
 
@@ -81,16 +82,21 @@ func New() *Server {
 	s.router = httprouter.New()
 	s.router.NotFound = s.onMissingHandler
 
+	// Enable renderer debugging
+	render.Settings.Debug = true
+	// Disable render template caching
+	render.Settings.CacheTemplates = false
+
 	return s
 }
 
 // Start launches the webserver so that it begins listening and serving requests
 // on the desired address.
 func (s *Server) Start(address string) {
-	consolelog("success", "Webserver preparing to listen on "+address)
+	log.Printf("Webserver preparing to listen on %s", address)
 
 	if err := http.ListenAndServe(address, s); err != nil {
-		consolelog("fatal", "Webserver unable to listen on "+address)
+		log.Printf("Webserver failed to listen on %s", address)
 		panic(err)
 	}
 }
@@ -98,45 +104,42 @@ func (s *Server) Start(address string) {
 // ServeHTTP handles all requests of our web server and delegates to the
 // gorilla mux package for routing and actual handler execution.
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("Serving a new web request")
-
 	s.router.ServeHTTP(w, r)
 
-	fmt.Println("Concluding a web request")
 }
 
 // captureRequest builds a new Event to model a request/response handled
 // by our Webserver.
-func (s *Server) captureRequest(w http.ResponseWriter, req *http.Request, params httprouter.Params, handlers []HandlerFunc) *Event {
+func (s *Server) captureRequest(
+	w http.ResponseWriter,
+	req *http.Request,
+	params httprouter.Params,
+	handlers []HandlerFunc) *Event {
 
 	var startTime = time.Now()
-	var e = new(Event)
 
-	// Note that we've accepted the request for processing
-	e.StatusCode = 202
-	e.StartTime = startTime
+	event := eventFactory(startTime)
 
-	id, err := snowflake.Next()
-	if err != nil {
-		panic("Snowflake failed?")
-	}
-	e.id = id
-
-	return e
+	return event
 }
 
 // onMissingHandler replies to the request with an HTTP 404 not found error.
 // This function is triggered when we are unable to match a route.
 func (s *Server) onMissingHandler(w http.ResponseWriter, req *http.Request) {
-	rc := s.captureRequest(w, req, nil, s.MissingHandler)
-	rc.StatusCode = 404
-	_, _ = w.Write([]byte("Not Found"))
-	fmt.Println("404: " + req.URL.Path)
+	event := s.captureRequest(w, req, nil, s.MissingHandler)
+
+	_ = event.HTML("onMissingHandler", nil)
+
+	event.StatusCode = 404
+	//_, _ = w.Write(content)
+	log.Printf("onMissingHandler 404 response for `%s`", req.URL.Path)
+
+	w.Write(event.Body.Bytes())
 }
 
-/*------------------------------------------------------------------------------
-Route Namespace
------------------------------------------------------------------------------ */
+/***********************************************
+							Route Namespace
+***********************************************/
 
 func (rns *RouteNamespace) buildPath(p string) string {
 	return path.Join(rns.prefix, p)
@@ -144,8 +147,27 @@ func (rns *RouteNamespace) buildPath(p string) string {
 
 // Handle registers handlers!
 func (rns *RouteNamespace) Handle(method string, path string, handlers []HandlerFunc) {
-	//p := rns.buildPath(path)
+	p := rns.buildPath(path)
 
+	if Debug {
+		log.Printf("Registering handler %s:%s", method, p)
+	}
+
+	// Serve the request
+	rns.server.router.Handle(method, path, func(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
+		if Debug {
+			log.Printf("Capturing request")
+		}
+		event := rns.server.captureRequest(w, req, nil, handlers)
+
+		// TODO Execute all handlers passed in their order stopping if one
+		// chooses to write to the body unless we can/should simply append
+		// the event body.
+		handlers[0](event)
+
+		// Grab the contents rendered into the Event if any
+		w.Write(event.Body.Bytes())
+	})
 }
 
 // GET is a conveinence method for registering handlers
