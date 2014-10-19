@@ -16,9 +16,8 @@ const (
 func main() {
 	ws := webserver.New()
 
-	ws.GET("/", func(event *webserver.Event) {
-		event.SetView("homepage", true, nil)
-	})
+	// Example handler
+	ws.GET("/", homeHandler)
 
 	wg := &sync.WaitGroup{}
 
@@ -32,4 +31,8 @@ func main() {
 	}()
 
 	wg.Wait()
+}
+
+func homeHandler(event *webserver.Event) {
+	event.HTML("demo", nil)
 }
