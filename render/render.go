@@ -13,7 +13,7 @@ type (
 	// Conventions organizes the default settings for the Webserver renderer
 	Conventions struct {
 		TemplateDirectory string
-		Debug             bool
+		LogDebugMessages  bool
 		CacheTemplates    bool
 	}
 
@@ -31,7 +31,7 @@ type (
 
 var Settings = Conventions{
 	TemplateDirectory: "web-src/html/",
-	Debug:             false,
+	LogDebugMessages:  false,
 	CacheTemplates:    true,
 }
 
@@ -45,7 +45,7 @@ func init() {
 }
 
 func (r html) Render(view string, args ...interface{}) ([]byte, error) {
-	if Settings.Debug {
+	if Settings.LogDebugMessages {
 		log.Printf("Rendering view %s", view)
 	}
 
@@ -66,7 +66,7 @@ func executeTemplate(file string, data interface{}) (body []byte, err error) {
 
 	// If the view is not already present in the registry
 	if !present {
-		if Settings.Debug {
+		if Settings.LogDebugMessages {
 			log.Printf("Parsing template %s", file)
 		}
 
@@ -82,7 +82,7 @@ func executeTemplate(file string, data interface{}) (body []byte, err error) {
 		}
 
 		if Settings.CacheTemplates {
-			if Settings.Debug {
+			if Settings.LogDebugMessages {
 				log.Printf("Caching rendered template %s", file)
 			}
 			tr.Lock()
