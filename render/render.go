@@ -45,7 +45,6 @@ func init() {
 }
 
 func (r html) Render(view string, args ...interface{}) ([]byte, error) {
-
 	if Settings.Debug {
 		log.Printf("Rendering view %s", view)
 	}

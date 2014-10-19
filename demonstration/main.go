@@ -16,6 +16,13 @@ const (
 func main() {
 	ws := webserver.New()
 
+	// Enable debugging of the webserver
+	wsconfig := &webserver.Settings
+	// Enable webserver debug logging
+	wsconfig.Debug = true
+	// Enable renderer debugging logging
+	wsconfig.Render.Debug = true
+
 	// Example handler
 	ws.GET("/", homeHandler)
 

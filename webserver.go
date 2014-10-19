@@ -43,11 +43,6 @@ const (
 	MIMEXICON = "image/x-icon"
 )
 
-var (
-	// Debug flag to output debug messages to the console
-	Debug = true
-)
-
 type (
 	// HandlerFunc is a request event handler
 	HandlerFunc func(*Event)
@@ -67,6 +62,22 @@ type (
 		router         *httprouter.Router // Delegate to the httprouter package for performant route matching
 		MissingHandler []HandlerFunc
 	}
+
+	// Conventions define configuration and are set to our conventional, default
+	// values.
+	Conventions struct {
+		Render *render.Conventions
+		Debug  bool
+	}
+)
+
+var (
+	// Settings allows a developer to override the conventional settings of the
+	// webserver.
+	Settings = Conventions{
+		Render: &render.Settings,
+		Debug:  false,
+	}
 )
 
 // New returns a new WebServer.
@@ -81,11 +92,6 @@ func New() *Server {
 
 	s.router = httprouter.New()
 	s.router.NotFound = s.onMissingHandler
-
-	// Enable renderer debugging
-	render.Settings.Debug = true
-	// Disable render template caching
-	render.Settings.CacheTemplates = false
 
 	return s
 }
@@ -149,13 +155,13 @@ func (rns *RouteNamespace) buildPath(p string) string {
 func (rns *RouteNamespace) Handle(method string, path string, handlers []HandlerFunc) {
 	p := rns.buildPath(path)
 
-	if Debug {
+	if Settings.Debug {
 		log.Printf("Registering handler %s:%s", method, p)
 	}
 
 	// Serve the request
 	rns.server.router.Handle(method, path, func(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
-		if Debug {
+		if Settings.Debug {
 			log.Printf("Capturing request")
 		}
 		event := rns.server.captureRequest(w, req, nil, handlers)
