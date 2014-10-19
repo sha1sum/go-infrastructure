@@ -1,7 +1,10 @@
 package webserver
 
 import (
+	"bytes"
 	"time"
+
+	"git.wreckerlabs.com/in/webserver/render"
 
 	"github.com/sdming/gosnow"
 )
@@ -25,14 +28,47 @@ type Event struct {
 	// long a request has taken.
 	Duration time.Time `json:"duration"`
 	// StatusCode
-	StatusCode int
+	StatusCode int `json:"statusCode"`
+
+	renderer render.Renderer
+
+	Body *bytes.Buffer
+}
+
+func eventFactory(start time.Time) *Event {
+	var e = new(Event)
+	e.StartTime = start
+
+	e.StatusCode = 202 // Note that we've accepted the request for processing
+
+	id, err := snowflake.Next()
+	if err != nil {
+		panic("Snowflake failed?")
+	}
+	e.id = id
+
+	e.Body = new(bytes.Buffer)
+
+	return e
 }
 
 func (e Event) getID() uint64 {
 	return e.id
 }
 
-// SetView declares an HTML view to render.
-func (e *Event) SetView(view string, noLayout bool, args interface{}) {
+// HTML renders the HTML view specified by it's filename omitting the file extension.
+func (e *Event) HTML(name string, args interface{}) error {
+	content, err := render.HTML.Render(name, nil)
+	if err != nil {
+		return err
+	}
+
+	e.Body.Write(content)
+
+	return nil
+}
+
+// LayoutHTML renders the HTML layout and embedded view specified by their filenames omitting the file extension.
+func (e *Event) LayoutHTML(layout string, template string, args interface{}) {
 
 }
