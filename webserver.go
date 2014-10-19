@@ -43,6 +43,13 @@ const (
 	MIMEXICON = "image/x-icon"
 )
 
+const (
+	// defaultResponse404 is returned if the server is unable to render the response
+	// using the configured SystemTemplate. This can happen if a template file does not
+	// exist at the configured path.
+	defaultResponse404 = `<html><head><title>404 Not Found</title><style>body{background-color:black;color:white;margin:20%;}</style></head><body><center><h1>404 Not Found</h1><hr><p>WreckerLabs Webserver</p></center></body></html>`
+)
+
 type (
 	// HandlerFunc is a request event handler
 	HandlerFunc func(*Event)
@@ -66,8 +73,13 @@ type (
 	// Conventions define configuration and are set to our conventional, default
 	// values.
 	Conventions struct {
-		Render *render.Conventions
-		Debug  bool
+		Render           *render.Conventions
+		LogDebugMessages bool
+		LogErrorMessages bool
+		// SystemTemplates is a map of keys to template paths. Default templates
+		// such as `onMissingHandler` (404) are configurable here allowing developers
+		// to customize exception pages for each implementation.
+		SystemTemplates map[string]string
 	}
 )
 
@@ -75,8 +87,12 @@ var (
 	// Settings allows a developer to override the conventional settings of the
 	// webserver.
 	Settings = Conventions{
-		Render: &render.Settings,
-		Debug:  false,
+		Render:           &render.Settings,
+		LogDebugMessages: false,
+		LogErrorMessages: true,
+		SystemTemplates: map[string]string{
+			"onMissingHandler": "errors/onMissingHandler",
+		},
 	}
 )
 
@@ -133,14 +149,22 @@ func (s *Server) captureRequest(
 // This function is triggered when we are unable to match a route.
 func (s *Server) onMissingHandler(w http.ResponseWriter, req *http.Request) {
 	event := s.captureRequest(w, req, nil, s.MissingHandler)
+	event.StatusCode = http.StatusNotFound
+	template := Settings.SystemTemplates["onMissingHandler"]
 
-	_ = event.HTML("onMissingHandler", nil)
-
-	event.StatusCode = 404
-	//_, _ = w.Write(content)
-	log.Printf("onMissingHandler 404 response for `%s`", req.URL.Path)
-
-	w.Write(event.Body.Bytes())
+	err := event.HTML(template, nil)
+	if err != nil {
+		if Settings.LogErrorMessages {
+			log.Printf("webserver.OnMissingHandler failed to render template `%s`", template)
+		}
+		event.Body.Write([]byte(defaultResponse404))
+		w.Write(event.Body.Bytes())
+		//var buf bytes.Buffer
+		//err = defaultResponseTemplate.Execute(event.Body, struct{ Status string }{Status: "404 Not Found"})
+		//if err != nil && Settings.LogErrorMessages {
+		//	panic(err)
+		//}
+	}
 }
 
 /***********************************************
@@ -155,13 +179,13 @@ func (rns *RouteNamespace) buildPath(p string) string {
 func (rns *RouteNamespace) Handle(method string, path string, handlers []HandlerFunc) {
 	p := rns.buildPath(path)
 
-	if Settings.Debug {
+	if Settings.LogDebugMessages {
 		log.Printf("Registering handler %s:%s", method, p)
 	}
 
 	// Serve the request
 	rns.server.router.Handle(method, path, func(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
-		if Settings.Debug {
+		if Settings.LogDebugMessages {
 			log.Printf("Capturing request")
 		}
 		event := rns.server.captureRequest(w, req, nil, handlers)
@@ -170,6 +194,11 @@ func (rns *RouteNamespace) Handle(method string, path string, handlers []Handler
 		// chooses to write to the body unless we can/should simply append
 		// the event body.
 		handlers[0](event)
+
+		// Write the response to the client
+		if event.StatusCode == 0 {
+			w.WriteHeader(event.StatusCode)
+		}
 
 		// Grab the contents rendered into the Event if any
 		w.Write(event.Body.Bytes())
