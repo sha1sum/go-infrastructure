@@ -93,10 +93,9 @@ var (
 	Settings = Conventions{
 		Render:                 &render.Settings,
 		LogDebugMessages:       false,
-		LogWarningMessages:     true,
+		LogWarningMessages:     false,
 		LogErrorMessages:       true,
-		EnableStaticFileServer: true,
-		StaticFilePath:         "assets",
+		EnableStaticFileServer: false,
 		SystemTemplates: map[string]string{
 			"onMissingHandler": "errors/onMissingHandler",
 		},
@@ -111,10 +110,9 @@ func New() *Server {
 	s := &Server{}
 	// Setup an initial route namespace
 	s.RouteNamespace = &RouteNamespace{
-		Handlers: nil,
-		prefix:   "/",
-		parent:   nil,
-		server:   s}
+		prefix: "/",
+		parent: nil,
+		server: s}
 
 	s.router = httprouter.New()
 	s.router.NotFound = s.onMissingHandler
@@ -138,26 +136,28 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	requestPath := req.URL.Path
 
-	for prefix, staticDir := range Settings.staticDir {
-		if Settings.LogDebugMessages {
-			log.Printf("Evaluating path `%s` for static path `%s`->`%s`", requestPath, prefix, staticDir)
-		}
-		if strings.HasPrefix(requestPath, prefix) {
-			filePath := staticDir + requestPath[len(prefix):]
-			fileInfo, err := os.Stat(filePath)
-			if err != nil {
-				if Settings.LogWarningMessages {
-					log.Printf("Unable to load file information for `%s` at `%s`: Error: %s", requestPath, filePath, err)
+	if Settings.EnableStaticFileServer {
+		for prefix, staticDir := range Settings.staticDir {
+			if Settings.LogDebugMessages {
+				log.Printf("Evaluating path `%s` for static path `%s`->`%s`", requestPath, prefix, staticDir)
+			}
+			if strings.HasPrefix(requestPath, prefix) {
+				filePath := staticDir + requestPath[len(prefix):]
+				fileInfo, err := os.Stat(filePath)
+				if err != nil {
+					if Settings.LogWarningMessages {
+						log.Printf("Unable to load file information for `%s` at `%s`: Error: %s", requestPath, filePath, err)
+					}
+					s.onMissingHandler(w, req)
+					return
 				}
-				s.onMissingHandler(w, req)
-				return
+				// TODO: Serve Directory Listing? Throw a 403 Forbidden Error? Defaulting to 404 is probably not robust enough for our web server
+				if fileInfo.IsDir() {
+					s.onMissingHandler(w, req)
+				}
+				// TODO: Enable gZIP support if allowed for css, js, etc.
+				http.ServeFile(w, req, filePath)
 			}
-			// TODO: Serve Directory Listing? Throw a 403 Forbidden Error? Defaulting to 404 is probably not robust enough for our web server
-			if fileInfo.IsDir() {
-				s.onMissingHandler(w, req)
-			}
-			// TODO: Enable gZIP support if allowed for css, js, etc.
-			http.ServeFile(w, req, filePath)
 		}
 	}
 

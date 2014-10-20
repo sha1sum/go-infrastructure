@@ -12,10 +12,9 @@ import (
 type (
 	// RouteNamespace groups routes according to a specific URL entry point or prefix.
 	RouteNamespace struct {
-		Handlers []HandlerFunc
-		prefix   string
-		parent   *RouteNamespace
-		server   *Server
+		prefix string
+		parent *RouteNamespace
+		server *Server
 	}
 )
 

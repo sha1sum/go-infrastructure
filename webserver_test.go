@@ -7,18 +7,25 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("Webserver", func() {
+var _ = Describe("Webserver without any configuration", func() {
 
-	ws := New()
+	_ = New()
 
-	Describe("A webserver", func() {
-		Context("without any configuration", func() {
-			It("should have no handlers defined", func() {
-				Expect(len(ws.Handlers)).To(Equal(0))
-			})
-			It("should have a root RouteNamespace", func() {
-				Expect(ws.Prefix).To(Equal("/"))
-			})
+	It("should have LogDebugMessages disabled by default", func() {
+		Expect(Settings.LogDebugMessages).To(BeFalse())
+	})
+	It("should have LogWarningMessages disabled by default", func() {
+		Expect(Settings.LogWarningMessages).To(BeFalse())
+	})
+	It("should have EnableStaticFileServer disabled by default", func() {
+		Expect(Settings.EnableStaticFileServer).To(BeFalse())
+	})
+	Context("by convention", func() {
+		It("should have the expect number of SystemTemplates", func() {
+			Expect(len(Settings.SystemTemplates)).Should(Equal(1))
+		})
+		It("should have an onMissingHandler", func() {
+			Expect(Settings.SystemTemplates["onMissingHandler"]).Should(Equal("errors/onMissingHandler"))
 		})
 	})
 })
