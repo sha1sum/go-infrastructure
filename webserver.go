@@ -52,7 +52,7 @@ const (
 )
 
 type (
-	// HandlerFunc is a request event handler
+	// HandlerFunc is a request event handler and accepts a RequestContext
 	HandlerFunc func(*context.Event)
 
 	// Server represents an instance of the webserver.
