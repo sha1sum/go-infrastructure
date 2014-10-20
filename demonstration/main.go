@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"git.wreckerlabs.com/in/webserver"
+	"git.wreckerlabs.com/in/webserver/context"
 )
 
 const (
@@ -26,6 +27,9 @@ func main() {
 	// Example handler
 	ws.GET("/", homeHandler)
 
+	// Example of registering a directory to serve files from
+	ws.FILES("/assets", "./assets")
+
 	wg := &sync.WaitGroup{}
 
 	// Webserver
@@ -40,6 +44,6 @@ func main() {
 	wg.Wait()
 }
 
-func homeHandler(event *webserver.Event) {
-	event.HTML("demo", nil)
+func homeHandler(e *context.Event) {
+	e.HTML("demo", nil)
 }

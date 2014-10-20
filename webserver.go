@@ -7,10 +7,11 @@ package webserver
 import (
 	"log"
 	"net/http"
-	"path"
+	"os"
+	"strings"
 	"sync"
-	"time"
 
+	"git.wreckerlabs.com/in/webserver/context"
 	"git.wreckerlabs.com/in/webserver/render"
 	"github.com/julienschmidt/httprouter"
 )
@@ -52,15 +53,7 @@ const (
 
 type (
 	// HandlerFunc is a request event handler
-	HandlerFunc func(*Event)
-
-	// RouteNamespace groups routes according to a specific URL entry point or prefix.
-	RouteNamespace struct {
-		Handlers []HandlerFunc
-		prefix   string
-		parent   *RouteNamespace
-		server   *Server
-	}
+	HandlerFunc func(*context.Event)
 
 	// Server represents an instance of the webserver.
 	Server struct {
@@ -73,13 +66,24 @@ type (
 	// Conventions define configuration and are set to our conventional, default
 	// values.
 	Conventions struct {
-		Render           *render.Conventions
+		// Reference to the conventions of the webserver's rendering engine
+		Render *render.Conventions
+		// LogDebugMessages if true, enables debug observation logging
 		LogDebugMessages bool
+		// LogWarningMessages if true, enables warning logging behavior.
+		LogWarningMessages bool
+		// LogErrorMessages if true, enables error logging behavior
 		LogErrorMessages bool
+		// EnableStaticFileServer if true, enables the serving of static assets such as CSS, JS, or other files.
+		EnableStaticFileServer bool
+		// StaticFilePath defines the releative root directory static files can be served from. Example "public" or "web-src/cdn/"
+		StaticFilePath string
 		// SystemTemplates is a map of keys to template paths. Default templates
 		// such as `onMissingHandler` (404) are configurable here allowing developers
 		// to customize exception pages for each implementation.
 		SystemTemplates map[string]string
+		// A map of directory paths the webserver should serve static files from
+		staticDir map[string]string
 	}
 )
 
@@ -87,12 +91,16 @@ var (
 	// Settings allows a developer to override the conventional settings of the
 	// webserver.
 	Settings = Conventions{
-		Render:           &render.Settings,
-		LogDebugMessages: false,
-		LogErrorMessages: true,
+		Render:                 &render.Settings,
+		LogDebugMessages:       false,
+		LogWarningMessages:     true,
+		LogErrorMessages:       true,
+		EnableStaticFileServer: true,
+		StaticFilePath:         "assets",
 		SystemTemplates: map[string]string{
 			"onMissingHandler": "errors/onMissingHandler",
 		},
+		staticDir: make(map[string]string),
 	}
 	// If we fail to find a configured onMissingHandler once we will stop looking
 	seekOnMissingHandler = true
@@ -125,11 +133,35 @@ func (s *Server) Start(address string) {
 	}
 }
 
-// ServeHTTP handles all requests of our web server and delegates to the
-// gorilla mux package for routing and actual handler execution.
-func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	s.router.ServeHTTP(w, r)
+// ServeHTTP handles all requests of our web server
+func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
+	requestPath := req.URL.Path
+
+	for prefix, staticDir := range Settings.staticDir {
+		if Settings.LogDebugMessages {
+			log.Printf("Evaluating path `%s` for static path `%s`->`%s`", requestPath, prefix, staticDir)
+		}
+		if strings.HasPrefix(requestPath, prefix) {
+			filePath := staticDir + requestPath[len(prefix):]
+			fileInfo, err := os.Stat(filePath)
+			if err != nil {
+				if Settings.LogWarningMessages {
+					log.Printf("Unable to load file information for `%s` at `%s`: Error: %s", requestPath, filePath, err)
+				}
+				s.onMissingHandler(w, req)
+				return
+			}
+			// TODO: Serve Directory Listing? Throw a 403 Forbidden Error? Defaulting to 404 is probably not robust enough for our web server
+			if fileInfo.IsDir() {
+				s.onMissingHandler(w, req)
+			}
+			// TODO: Enable gZIP support if allowed for css, js, etc.
+			http.ServeFile(w, req, filePath)
+		}
+	}
+
+	s.router.ServeHTTP(w, req)
 }
 
 // captureRequest builds a new Event to model a request/response handled
@@ -138,11 +170,9 @@ func (s *Server) captureRequest(
 	w http.ResponseWriter,
 	req *http.Request,
 	params httprouter.Params,
-	handlers []HandlerFunc) *Event {
+	handlers []HandlerFunc) *context.Event {
 
-	var startTime = time.Now()
-
-	event := eventFactory(startTime)
+	event := context.New(w, req, params)
 
 	return event
 }
@@ -163,150 +193,8 @@ func (s *Server) onMissingHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	if !seekOnMissingHandler {
-		event.Body.Write([]byte(defaultResponse404))
+		event.Output.Body([]byte(defaultResponse404))
 	}
 
-	w.Write(event.Body.Bytes())
+	//w.Write(event.Body.Bytes())
 }
-
-/***********************************************
-							Route Namespace
-***********************************************/
-
-func (rns *RouteNamespace) buildPath(p string) string {
-	return path.Join(rns.prefix, p)
-}
-
-// Handle registers handlers!
-func (rns *RouteNamespace) Handle(method string, path string, handlers []HandlerFunc) {
-	p := rns.buildPath(path)
-
-	if Settings.LogDebugMessages {
-		log.Printf("Registering handler %s:%s", method, p)
-	}
-
-	// Serve the request
-	rns.server.router.Handle(method, path, func(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
-		if Settings.LogDebugMessages {
-			log.Printf("Capturing request")
-		}
-		event := rns.server.captureRequest(w, req, nil, handlers)
-
-		// TODO Execute all handlers passed in their order stopping if one
-		// chooses to write to the body unless we can/should simply append
-		// the event body.
-		handlers[0](event)
-
-		// Write the response to the client
-		if event.StatusCode == 0 {
-			w.WriteHeader(event.StatusCode)
-		}
-
-		// Grab the contents rendered into the Event if any
-		w.Write(event.Body.Bytes())
-	})
-}
-
-// GET is a conveinence method for registering handlers
-func (rns *RouteNamespace) GET(path string, handlers ...HandlerFunc) {
-	rns.Handle("GET", path, handlers)
-}
-
-/*
-type (
-	// Webserver is a functional webserver that a main program can use with the
-	// standard http package to serve traffic
-	webserver struct {
-		Mux              *mux.Router //Gorrilla MUX to resolve runtime routing of requests
-		HTTPHandlerCount int         // Count the handlers registered for our server
-	}
-)
-
-func (ws *webserver) RegisterHandler(h *handler.Handler) {
-	if h.SupportsHTTP() {
-		log.Println("Registering handler: ", h.Name)
-		ws.Mux.HandleFunc(h.HTTPPath, h.HTTPRunner).Methods(h.HTTPMethod)
-		ws.HTTPHandlerCount++
-	}
-}
-
-// NewWebserver is a factory method to construct a new webserver given the
-// provided handlers. The new webserver will automatically be configured to
-// server static assets from the /cdn/css; /cdn/js; and /cdn/m directories
-func NewWebserver(handlers []*handler.Handler) *webserver {
-	r := mux.NewRouter()
-	ws := &webserver{Mux: r}
-
-	for _, h := range handlers {
-		ws.RegisterHandler(h)
-	}
-
-	// Register some static asset routes to serve files from the applications
-	ws.Mux.PathPrefix("/cdn/").Handler(http.FileServer(http.Dir("./")))
-
-	r.NotFoundHandler = http.HandlerFunc(notFound)
-
-	return ws
-}
-
-// ServeHTTP sends our 404 response to the client
-func notFound(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(404)
-	w.Write([]byte("FourOhFour! What have you done?!?!?"))
-}
-
-// ServeHTTP handles all requests of our web server and delegates to the
-// gorilla mux package for routing and actual handler execution.
-func (ws *webserver) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-
-	re := NewRequestEvent(r)
-
-	// When using the recorder there is something lost in translation for static
-	// files with a "If Modified Since" header with the request--which browsers
-	// tend to do for second+ requests of the static assets. As a quick fix we
-	// will keep things simple and use a real response writer and avoid our
-	// lifecycle for static assets.
-	isCDN, pathError := path.Match("/cdn/ * / *", r.URL.Path)
-	if pathError != nil {
-		log.Fatal(pathError)
-		isCDN = false
-	}
-
-	if isCDN {
-		log.Println("[webserver] CDN simulation: ", r.URL.Path)
-		ws.Mux.ServeHTTP(w, r)
-		return
-	}
-
-	// Record the way the handlers treat ResponseWriter using the test package's
-	// Recorder. This technique will prevent any headers from being written
-	// before we can write them in this handler. This is important because as
-	// soon as a header is written bytes are sent to the client and we loose our
-	// chance to write headers in subsequent processing.
-	rec := httptest.NewRecorder()
-
-	// Provide the recorder to the Gorilla mux package to router and execute
-	// the registered handler (if any)
-	ws.Mux.ServeHTTP(rec, r)
-
-	// Determine how many bytes we've written from the handler system
-	re.ResponseContentLength = len(rec.Body.Bytes())
-
-	// Actually write headers to the ResponseWriter by copying any handlers
-	// set by our executed handlers into the ResponseWriter
-	for k, v := range rec.Header() {
-		w.Header()[k] = v
-	}
-
-	// Write the content length as measured by our
-	w.Header().Set("Content-Length", strconv.Itoa(re.ResponseContentLength))
-	w.Header().Set("VND.wreckerlabs.com.runtime", strconv.FormatFloat(re.GetCurrentRuntime().Seconds(), 'f', 6, 64))
-
-	// Set the status code--which also starts sending bytes back to the client
-	// and prevnts us from sending any more headers
-	w.WriteHeader(200)
-
-	// Write the original body provided by the handler to the ResponseWriter
-	w.Write(rec.Body.Bytes())
-}
-*/

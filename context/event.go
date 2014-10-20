@@ -1,11 +1,12 @@
-package webserver
+package context
 
 import (
-	"bytes"
+	"net/http"
 	"time"
 
 	"git.wreckerlabs.com/in/webserver/render"
 
+	"github.com/julienschmidt/httprouter"
 	"github.com/sdming/gosnow"
 )
 
@@ -32,12 +33,16 @@ type Event struct {
 
 	renderer render.Renderer
 
-	Body *bytes.Buffer
+	Input          *Input
+	Output         *Output
+	Request        *http.Request
+	ResponseWriter http.ResponseWriter
 }
 
-func eventFactory(start time.Time) *Event {
+// New produces a new request context event.
+func New(w http.ResponseWriter, req *http.Request, params httprouter.Params) *Event {
 	var e = new(Event)
-	e.StartTime = start
+	e.StartTime = time.Now()
 
 	id, err := snowflake.Next()
 	if err != nil {
@@ -45,7 +50,10 @@ func eventFactory(start time.Time) *Event {
 	}
 	e.id = id
 
-	e.Body = new(bytes.Buffer)
+	e.Input = NewInput()
+	e.Output = NewOutput(e)
+	e.Request = req
+	e.ResponseWriter = w
 
 	return e
 }
@@ -54,6 +62,10 @@ func (e Event) getID() uint64 {
 	return e.id
 }
 
+// ---------------------
+// ---------------------
+// ---------------------
+
 // HTML renders the HTML view specified by it's filename omitting the file extension.
 func (e *Event) HTML(name string, args interface{}) error {
 	content, err := render.HTML.Render(name, nil)
@@ -61,7 +73,7 @@ func (e *Event) HTML(name string, args interface{}) error {
 		return err
 	}
 
-	e.Body.Write(content)
+	e.Output.Body(content)
 
 	return nil
 }
