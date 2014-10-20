@@ -62,6 +62,10 @@ func (rns *RouteNamespace) GET(path string, handlers ...HandlerFunc) {
 // FILES creates a
 func (rns *RouteNamespace) FILES(url string, path string) {
 
+	if !Settings.EnableStaticFileServer {
+		Settings.EnableStaticFileServer = true
+	}
+
 	if !strings.HasPrefix(url, "/") {
 		url = "/" + url
 	}
