@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestConfig(t *testing.T) {
+func TestWebserver(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Webserver Suite")
 }
