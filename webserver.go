@@ -9,6 +9,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"time"
 
 	"git.wreckerlabs.com/in/webserver/context"
 	"git.wreckerlabs.com/in/webserver/render"
@@ -135,6 +136,7 @@ func (s *Server) Start(address string) {
 
 // ServeHTTP handles all requests of our web server
 func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	starttick := time.Now()
 
 	requestPath := req.URL.Path
 
@@ -170,6 +172,8 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 
 	s.router.ServeHTTP(w, req)
+
+	log.WithFields(log.Fields{"event": packagename + "ServeHTTP", "ms": time.Since(starttick) * time.Millisecond, "path": requestPath}).Info("Request complete")
 }
 
 // captureRequest builds a new Event to model a request/response handled

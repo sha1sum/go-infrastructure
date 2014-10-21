@@ -2,7 +2,6 @@ package context
 
 import (
 	"net/http"
-	"time"
 
 	"git.wreckerlabs.com/in/webserver/render"
 
@@ -23,11 +22,6 @@ type Event struct {
 	RequestContentLength int `json:"requestContentLength"`
 	// ResponseContentLength contains a count of outgoing bytes.
 	ResponseContentLength int `json:"requestContentLength"`
-	// StartTime can be used for performance metrics.
-	StartTime time.Time `json:"startTime"`
-	// Duration is set when a request is concluded and is a measure of how
-	// long a request has taken.
-	Duration time.Time `json:"duration"`
 	// StatusCode
 	StatusCode int `json:"statusCode"`
 
@@ -42,7 +36,6 @@ type Event struct {
 // New produces a new request context event.
 func New(w http.ResponseWriter, req *http.Request, params httprouter.Params) *Event {
 	var e = new(Event)
-	e.StartTime = time.Now()
 
 	id, err := snowflake.Next()
 	if err != nil {
@@ -56,10 +49,6 @@ func New(w http.ResponseWriter, req *http.Request, params httprouter.Params) *Ev
 	e.ResponseWriter = w
 
 	return e
-}
-
-func (e Event) getID() uint64 {
-	return e.id
 }
 
 // HTML renders the HTML view specified by it's filename omitting the file extension.
