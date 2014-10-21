@@ -4,9 +4,10 @@ package render
 import (
 	"bytes"
 	"html/template"
-	"log"
 	"path/filepath"
 	"sync"
+
+	log "github.com/Sirupsen/logrus"
 )
 
 type (
@@ -31,7 +32,7 @@ type (
 	}
 )
 
-const packagename = "[webserver.render]"
+const packagename = "webserver.render:"
 
 var Settings = Conventions{
 	TemplateDirectory:  "web-src/html/",
@@ -52,7 +53,7 @@ func init() {
 
 func (r html) Render(view string, args ...interface{}) ([]byte, error) {
 	if Settings.LogDebugMessages {
-		log.Printf("%s Rendering view %s", packagename, view)
+		log.WithFields(log.Fields{"event": packagename + "Render", "view": view}).Debug("Rendering view")
 	}
 
 	file := Settings.TemplateDirectory + view + ".html"
@@ -66,7 +67,7 @@ func (r html) Render(view string, args ...interface{}) ([]byte, error) {
 func executeTemplate(file string, data interface{}) (body []byte, err error) {
 
 	if Settings.LogDebugMessages {
-		log.Printf("%s Rendering %s", packagename, file)
+		log.WithFields(log.Fields{"event": packagename + "Render", "file": file}).Debug("Rendering template")
 	}
 
 	// Place a read lock on our registry
@@ -77,7 +78,7 @@ func executeTemplate(file string, data interface{}) (body []byte, err error) {
 	// If the view is not already present in the registry
 	if !present {
 		if Settings.LogDebugMessages {
-			log.Printf("%s Parsing template %s", packagename, file)
+			log.WithFields(log.Fields{"event": packagename + "Render", "file": file}).Debug("Parsing template")
 		}
 
 		// Create a new template
@@ -87,13 +88,13 @@ func executeTemplate(file string, data interface{}) (body []byte, err error) {
 		// t.Delims("<%=", ">")
 		_, err = t.ParseFiles(file)
 		if err != nil {
-			log.Printf("%s Unable to render template due to the following error: %s", packagename, err)
+			log.WithFields(log.Fields{"event": packagename + "Render", "file": file, "error": err}).Error("Unable to parse template")
 			return
 		}
 
 		if Settings.CacheTemplates {
 			if Settings.LogDebugMessages {
-				log.Printf("%s Caching rendered template %s", packagename, file)
+				log.WithFields(log.Fields{"event": packagename + "Render", "file": file}).Debug("Caching rendered template")
 			}
 			tr.Lock()
 			tr.templates[file] = t
@@ -105,7 +106,7 @@ func executeTemplate(file string, data interface{}) (body []byte, err error) {
 	err = t.Execute(&buf, data)
 	if err != nil {
 		if Settings.LogErrorMessages {
-			log.Printf("%s Unable to render template `%s`. Error: %s", packagename, file, err)
+			log.WithFields(log.Fields{"event": packagename + "Render", "file": file, "error": err}).Debug("Unable to execute template")
 		}
 		return
 	}

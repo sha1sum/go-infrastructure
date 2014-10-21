@@ -1,11 +1,11 @@
 package webserver
 
 import (
-	"log"
 	"net/http"
 	"path"
 	"strings"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/julienschmidt/httprouter"
 )
 
@@ -27,13 +27,13 @@ func (rns *RouteNamespace) Handle(method string, path string, handlers []Handler
 	p := rns.buildPath(path)
 
 	if Settings.LogDebugMessages {
-		log.Printf("Registering handler %s:%s", method, p)
+		log.WithFields(log.Fields{"event": packagename + "Handle", "method": method, "path": p}).Debug("Registering handler")
 	}
 
 	// Serve the request
 	rns.server.router.Handle(method, path, func(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
 		if Settings.LogDebugMessages {
-			log.Printf("Capturing request")
+			log.WithFields(log.Fields{"event": packagename + "Handle", "method": method, "path": path}).Info("Capturing request")
 		}
 		event := rns.server.captureRequest(w, req, nil, handlers)
 

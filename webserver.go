@@ -5,7 +5,6 @@
 package webserver
 
 import (
-	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -13,6 +12,7 @@ import (
 
 	"git.wreckerlabs.com/in/webserver/context"
 	"git.wreckerlabs.com/in/webserver/render"
+	log "github.com/Sirupsen/logrus"
 	"github.com/julienschmidt/httprouter"
 )
 
@@ -45,7 +45,7 @@ const (
 )
 
 const (
-	packagename = "[webserver]"
+	packagename = "webserver:"
 	// defaultResponse404 is returned if the server is unable to render the response
 	// using the configured SystemTemplate. This can happen if a template file does not
 	// exist at the configured path.
@@ -108,6 +108,7 @@ var (
 
 // New returns a new WebServer.
 func New() *Server {
+	log.SetLevel(log.DebugLevel)
 	s := &Server{}
 	// Setup an initial route namespace
 	s.RouteNamespace = &RouteNamespace{
@@ -124,10 +125,10 @@ func New() *Server {
 // Start launches the webserver so that it begins listening and serving requests
 // on the desired address.
 func (s *Server) Start(address string) {
-	log.Printf("%s Webserver preparing to listen on %s", packagename, address)
+	log.WithFields(log.Fields{"event": packagename + "Start", "topic": "ListenAndServe", "key": address}).Info("Starting")
 
 	if err := http.ListenAndServe(address, s); err != nil {
-		log.Printf("%s Webserver failed to listen on %s", packagename, address)
+		log.WithFields(log.Fields{"event": "Start", "topic": "ListenAndServe", "key": address}).Fatal("Unable to start webserver")
 		panic(err)
 	}
 }
@@ -140,14 +141,14 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	if Settings.EnableStaticFileServer {
 		for prefix, staticDir := range Settings.staticDir {
 			if Settings.LogDebugMessages {
-				log.Printf("%s Evaluating path `%s` for static path `%s`->`%s`", packagename, requestPath, prefix, staticDir)
+				log.WithFields(log.Fields{"event": packagename + "ServeHTTP", "topic": "Serve Static", "key": requestPath}).Debug("Evaluating static route")
 			}
 			if strings.HasPrefix(requestPath, prefix) {
 				filePath := staticDir + requestPath[len(prefix):]
 				fileInfo, err := os.Stat(filePath)
 				if err != nil {
 					if Settings.LogWarningMessages {
-						log.Printf("%s Unable to load file information for `%s` at `%s`: Error: %s", packagename, requestPath, filePath, err)
+						log.WithFields(log.Fields{"event": packagename + "ServeHTTP", "topic": "Serve Static", "key": requestPath}).Warn("Unable to load file")
 					}
 					s.onMissingHandler(w, req)
 					return
@@ -158,7 +159,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 				}
 
 				if Settings.LogDebugMessages {
-					log.Printf("%s Unable to load file information for `%s` at `%s`: Error: %s", packagename, requestPath, filePath, err)
+					log.WithFields(log.Fields{"event": packagename + "ServeHTTP", "topic": "Serve Static", "key": requestPath}).Debug("Serving file")
 				}
 
 				// TODO: Enable gZIP support if allowed for css, js, etc.
@@ -194,7 +195,7 @@ func (s *Server) onMissingHandler(w http.ResponseWriter, req *http.Request) {
 		template := Settings.SystemTemplates["onMissingHandler"]
 		err := event.HTML(template, nil)
 		if err != nil {
-			log.Printf("%s Failed to render template `%s`", packagename, template)
+			log.WithFields(log.Fields{"event": packagename + "onMissingHandler", "topic": "Configured Template", "key": template}).Error("Failed to render template")
 			seekOnMissingHandler = false
 		}
 	}
