@@ -62,10 +62,6 @@ func (e Event) getID() uint64 {
 	return e.id
 }
 
-// ---------------------
-// ---------------------
-// ---------------------
-
 // HTML renders the HTML view specified by it's filename omitting the file extension.
 func (e *Event) HTML(name string, args interface{}) error {
 	content, err := render.HTML.Render(name, args)
@@ -76,9 +72,4 @@ func (e *Event) HTML(name string, args interface{}) error {
 	e.Output.Body(content)
 
 	return nil
-}
-
-// LayoutHTML renders the HTML layout and embedded view specified by their filenames omitting the file extension.
-func (e *Event) LayoutHTML(layout string, template string, args interface{}) {
-
 }
