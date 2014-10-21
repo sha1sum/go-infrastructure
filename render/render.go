@@ -20,6 +20,7 @@ type (
 		CacheTemplates     bool
 	}
 
+	// Renderer is an interface type that different renderers should implement
 	Renderer interface {
 		Render(args ...interface{}) ([]byte, error)
 	}
@@ -34,6 +35,7 @@ type (
 
 const packagename = "webserver.render:"
 
+// Settings provides exported access to runtime configuration
 var Settings = Conventions{
 	TemplateDirectory:  "web-src/html/",
 	LogDebugMessages:   false,
@@ -43,7 +45,8 @@ var Settings = Conventions{
 }
 
 var (
-	tr   templateRegistry
+	tr templateRegistry
+	// HTML renderer which implements the Render method
 	HTML = html{}
 )
 
@@ -51,24 +54,19 @@ func init() {
 	tr.templates = make(map[string]*template.Template)
 }
 
+// Render executes a template returning the rendered byte array and error
+// While this method supports the Renderer interface only one args is allowed.
 func (r html) Render(view string, args ...interface{}) ([]byte, error) {
-	if Settings.LogDebugMessages {
-		log.WithFields(log.Fields{"event": packagename + "Render", "view": view}).Debug("Rendering view")
-	}
+	log.WithFields(log.Fields{"event": packagename + "Render", "view": view}).Debug("Rendering view")
 
 	file := Settings.TemplateDirectory + view + ".html"
-	return executeTemplate(file, args)
-
-	//return content, err
+	return executeTemplate(file, args[0])
 }
 
 // executeTemplate ensures templates are cached
 // if caching is enabled.
 func executeTemplate(file string, data interface{}) (body []byte, err error) {
-
-	if Settings.LogDebugMessages {
-		log.WithFields(log.Fields{"event": packagename + "Render", "file": file}).Debug("Rendering template")
-	}
+	log.WithFields(log.Fields{"event": packagename + "Render", "file": file}).Debug("Rendering template")
 
 	// Place a read lock on our registry
 	tr.RLock()
@@ -77,9 +75,7 @@ func executeTemplate(file string, data interface{}) (body []byte, err error) {
 
 	// If the view is not already present in the registry
 	if !present {
-		if Settings.LogDebugMessages {
-			log.WithFields(log.Fields{"event": packagename + "Render", "file": file}).Debug("Parsing template")
-		}
+		log.WithFields(log.Fields{"event": packagename + "Render", "file": file}).Debug("Parsing template")
 
 		// Create a new template
 		t = template.New(filepath.Base(file))
@@ -93,9 +89,8 @@ func executeTemplate(file string, data interface{}) (body []byte, err error) {
 		}
 
 		if Settings.CacheTemplates {
-			if Settings.LogDebugMessages {
-				log.WithFields(log.Fields{"event": packagename + "Render", "file": file}).Debug("Caching rendered template")
-			}
+			log.WithFields(log.Fields{"event": packagename + "Render", "file": file}).Debug("Caching rendered template")
+
 			tr.Lock()
 			tr.templates[file] = t
 			tr.Unlock()
@@ -105,9 +100,8 @@ func executeTemplate(file string, data interface{}) (body []byte, err error) {
 	var buf bytes.Buffer
 	err = t.Execute(&buf, data)
 	if err != nil {
-		if Settings.LogErrorMessages {
-			log.WithFields(log.Fields{"event": packagename + "Render", "file": file, "error": err}).Debug("Unable to execute template")
-		}
+		log.WithFields(log.Fields{"event": packagename + "Render", "file": file, "error": err}).Debug("Unable to execute template")
+
 		return
 	}
 

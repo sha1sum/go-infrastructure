@@ -68,7 +68,7 @@ func (e Event) getID() uint64 {
 
 // HTML renders the HTML view specified by it's filename omitting the file extension.
 func (e *Event) HTML(name string, args interface{}) error {
-	content, err := render.HTML.Render(name, nil)
+	content, err := render.HTML.Render(name, args)
 	if err != nil {
 		return err
 	}
