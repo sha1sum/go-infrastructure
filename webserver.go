@@ -45,6 +45,7 @@ const (
 )
 
 const (
+	packagename = "[webserver]"
 	// defaultResponse404 is returned if the server is unable to render the response
 	// using the configured SystemTemplate. This can happen if a template file does not
 	// exist at the configured path.
@@ -123,10 +124,10 @@ func New() *Server {
 // Start launches the webserver so that it begins listening and serving requests
 // on the desired address.
 func (s *Server) Start(address string) {
-	log.Printf("Webserver preparing to listen on %s", address)
+	log.Printf("%s Webserver preparing to listen on %s", packagename, address)
 
 	if err := http.ListenAndServe(address, s); err != nil {
-		log.Printf("Webserver failed to listen on %s", address)
+		log.Printf("%s Webserver failed to listen on %s", packagename, address)
 		panic(err)
 	}
 }
@@ -139,14 +140,14 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	if Settings.EnableStaticFileServer {
 		for prefix, staticDir := range Settings.staticDir {
 			if Settings.LogDebugMessages {
-				log.Printf("Evaluating path `%s` for static path `%s`->`%s`", requestPath, prefix, staticDir)
+				log.Printf("%s Evaluating path `%s` for static path `%s`->`%s`", packagename, requestPath, prefix, staticDir)
 			}
 			if strings.HasPrefix(requestPath, prefix) {
 				filePath := staticDir + requestPath[len(prefix):]
 				fileInfo, err := os.Stat(filePath)
 				if err != nil {
 					if Settings.LogWarningMessages {
-						log.Printf("Unable to load file information for `%s` at `%s`: Error: %s", requestPath, filePath, err)
+						log.Printf("%s Unable to load file information for `%s` at `%s`: Error: %s", packagename, requestPath, filePath, err)
 					}
 					s.onMissingHandler(w, req)
 					return
@@ -155,8 +156,14 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 				if fileInfo.IsDir() {
 					s.onMissingHandler(w, req)
 				}
+
+				if Settings.LogDebugMessages {
+					log.Printf("%s Unable to load file information for `%s` at `%s`: Error: %s", packagename, requestPath, filePath, err)
+				}
+
 				// TODO: Enable gZIP support if allowed for css, js, etc.
 				http.ServeFile(w, req, filePath)
+				return
 			}
 		}
 	}
@@ -187,7 +194,7 @@ func (s *Server) onMissingHandler(w http.ResponseWriter, req *http.Request) {
 		template := Settings.SystemTemplates["onMissingHandler"]
 		err := event.HTML(template, nil)
 		if err != nil {
-			log.Printf("webserver.OnMissingHandler failed to render template `%s`", template)
+			log.Printf("%s Failed to render template `%s`", packagename, template)
 			seekOnMissingHandler = false
 		}
 	}

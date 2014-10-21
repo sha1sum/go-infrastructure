@@ -12,9 +12,11 @@ import (
 type (
 	// Conventions organizes the default settings for the Webserver renderer
 	Conventions struct {
-		TemplateDirectory string
-		LogDebugMessages  bool
-		CacheTemplates    bool
+		TemplateDirectory  string
+		LogDebugMessages   bool
+		LogErrorMessages   bool
+		LogTemplateResults bool
+		CacheTemplates     bool
 	}
 
 	Renderer interface {
@@ -29,10 +31,14 @@ type (
 	}
 )
 
+const packagename = "[webserver.render]"
+
 var Settings = Conventions{
-	TemplateDirectory: "web-src/html/",
-	LogDebugMessages:  false,
-	CacheTemplates:    true,
+	TemplateDirectory:  "web-src/html/",
+	LogDebugMessages:   false,
+	LogErrorMessages:   true,
+	LogTemplateResults: false,
+	CacheTemplates:     true,
 }
 
 var (
@@ -46,7 +52,7 @@ func init() {
 
 func (r html) Render(view string, args ...interface{}) ([]byte, error) {
 	if Settings.LogDebugMessages {
-		log.Printf("Rendering view %s", view)
+		log.Printf("%s Rendering view %s", packagename, view)
 	}
 
 	file := Settings.TemplateDirectory + view + ".html"
@@ -59,6 +65,10 @@ func (r html) Render(view string, args ...interface{}) ([]byte, error) {
 // if caching is enabled.
 func executeTemplate(file string, data interface{}) (body []byte, err error) {
 
+	if Settings.LogDebugMessages {
+		log.Printf("%s Rendering %s", packagename, file)
+	}
+
 	// Place a read lock on our registry
 	tr.RLock()
 	t, present := tr.templates[file]
@@ -67,7 +77,7 @@ func executeTemplate(file string, data interface{}) (body []byte, err error) {
 	// If the view is not already present in the registry
 	if !present {
 		if Settings.LogDebugMessages {
-			log.Printf("Parsing template %s", file)
+			log.Printf("%s Parsing template %s", packagename, file)
 		}
 
 		// Create a new template
@@ -77,13 +87,13 @@ func executeTemplate(file string, data interface{}) (body []byte, err error) {
 		// t.Delims("<%=", ">")
 		_, err = t.ParseFiles(file)
 		if err != nil {
-			log.Printf("Unable to render template due to the following error: %s", err)
+			log.Printf("%s Unable to render template due to the following error: %s", packagename, err)
 			return
 		}
 
 		if Settings.CacheTemplates {
 			if Settings.LogDebugMessages {
-				log.Printf("Caching rendered template %s", file)
+				log.Printf("%s Caching rendered template %s", packagename, file)
 			}
 			tr.Lock()
 			tr.templates[file] = t
@@ -94,6 +104,9 @@ func executeTemplate(file string, data interface{}) (body []byte, err error) {
 	var buf bytes.Buffer
 	err = t.Execute(&buf, data)
 	if err != nil {
+		if Settings.LogErrorMessages {
+			log.Printf("%s Unable to render template `%s`. Error: %s", packagename, file, err)
+		}
 		return
 	}
 
