@@ -66,7 +66,7 @@ func (r html) Render(view string, args ...interface{}) ([]byte, error) {
 // executeTemplate ensures templates are cached
 // if caching is enabled.
 func executeTemplate(file string, data interface{}) (body []byte, err error) {
-	log.WithFields(log.Fields{"event": packagename + "Render", "file": file}).Debug("Rendering template")
+	log.WithFields(log.Fields{"event": packagename + "Render", "file": file, "willCache": Settings.CacheTemplates}).Debug("Rendering template")
 
 	// Place a read lock on our registry
 	tr.RLock()
