@@ -44,7 +44,7 @@ func (rns *RouteNamespace) Handle(method string, path string, handlers []Handler
 
 		// Write the response to the client
 		if event.StatusCode == 0 {
-			w.WriteHeader(event.StatusCode)
+			//w.WriteHeader(event.StatusCode)
 		}
 	})
 }

@@ -44,6 +44,6 @@ func main() {
 	wg.Wait()
 }
 
-func homeHandler(e *context.Event) {
-	e.HTML("demo", nil)
+func homeHandler(c *context.Context) {
+	c.HTML("demo", nil)
 }

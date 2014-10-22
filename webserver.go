@@ -55,7 +55,7 @@ const (
 
 type (
 	// HandlerFunc is a request event handler and accepts a RequestContext
-	HandlerFunc func(*context.Event)
+	HandlerFunc func(*context.Context)
 
 	// Server represents an instance of the webserver.
 	Server struct {
@@ -182,7 +182,7 @@ func (s *Server) captureRequest(
 	w http.ResponseWriter,
 	req *http.Request,
 	params httprouter.Params,
-	handlers []HandlerFunc) *context.Event {
+	handlers []HandlerFunc) *context.Context {
 
 	event := context.New(w, req, params)
 
@@ -207,6 +207,4 @@ func (s *Server) onMissingHandler(w http.ResponseWriter, req *http.Request) {
 	if !seekOnMissingHandler {
 		event.Output.Body([]byte(defaultResponse404))
 	}
-
-	//w.Write(event.Body.Bytes())
 }

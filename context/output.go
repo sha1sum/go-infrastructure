@@ -6,23 +6,23 @@ import "strconv"
 type Output struct {
 	Status      int
 	ContentType string
-	Event       *Event
+	Context     *Context
 }
 
 // NewOutput returns a new Output
-func NewOutput(event *Event) *Output {
+func NewOutput(c *Context) *Output {
 	return &Output{
-		Event: event,
+		Context: c,
 	}
 }
 
 // Header writes a response header to the client
 func (output *Output) Header(key string, value string) {
-	output.Event.ResponseWriter.Header().Set(key, value)
+	output.Context.ResponseWriter.Header().Set(key, value)
 }
 
 // Body writes the response to the client
 func (output *Output) Body(content []byte) {
 	output.Header("Content-Length", strconv.Itoa(len(content)))
-	output.Event.ResponseWriter.Write(content)
+	output.Context.ResponseWriter.Write(content)
 }
