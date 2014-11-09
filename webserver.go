@@ -197,7 +197,7 @@ func (s *Server) onMissingHandler(w http.ResponseWriter, req *http.Request) {
 
 	if seekOnMissingHandler {
 		template := Settings.SystemTemplates["onMissingHandler"]
-		err := event.HTML(template, nil)
+		err := event.HTMLTemplate(template, nil)
 		if err != nil {
 			log.WithFields(log.Fields{"event": packagename + "onMissingHandler", "topic": "Configured Template", "key": template}).Error("Failed to render template")
 			seekOnMissingHandler = false
