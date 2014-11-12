@@ -193,7 +193,11 @@ func (s *Server) captureRequest(
 // This function is triggered when we are unable to match a route.
 func (s *Server) onMissingHandler(w http.ResponseWriter, req *http.Request) {
 	event := s.captureRequest(w, req, nil, s.MissingHandler)
+
 	event.StatusCode = http.StatusNotFound
+	w.WriteHeader(event.StatusCode)
+
+	log.WithFields(log.Fields{"event": packagename + "onMissingHandler"}).Debug("Executing onMissingHandler")
 
 	if seekOnMissingHandler {
 		template := Settings.SystemTemplates["onMissingHandler"]
