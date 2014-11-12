@@ -5,6 +5,7 @@ import (
 
 	"git.wreckerlabs.com/in/webserver/render"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/julienschmidt/httprouter"
 	"github.com/sdming/gosnow"
 )
@@ -43,10 +44,14 @@ func New(w http.ResponseWriter, req *http.Request, params httprouter.Params) *Co
 	}
 	c.id = id
 
-	c.Input = NewInput()
+	c.Input = NewInput(req)
 	c.Output = NewOutput(c)
 	c.Request = req
 	c.ResponseWriter = w
+
+	if c.Input.Is("POST") || c.Input.Is("PUT") {
+		c.Input.Body()
+	}
 
 	return c
 }
@@ -68,4 +73,9 @@ func (c *Context) HTMLTemplate(name string, args interface{}) error {
 	c.Output.Body(content)
 
 	return nil
+}
+
+// Dump spews the provided value to the stdout and is useful for debugging.
+func (c *Context) Dump(v interface{}) {
+	spew.Dump(v)
 }
