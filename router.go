@@ -75,3 +75,12 @@ func (rns *RouteNamespace) FILES(url string, path string) {
 
 	Settings.staticDir[url] = path
 }
+
+// POST is a conveinence method for registering handlers
+func (rns *RouteNamespace) POST(path string, handlers ...HandlerFunc) {
+	if Settings.LogDebugMessages {
+		log.Printf("Registering POST: %s", path)
+	}
+
+	rns.Handle("POST", path, handlers)
+}
