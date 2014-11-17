@@ -49,16 +49,9 @@ func (rns *RouteNamespace) Handle(method string, path string, handlers []Handler
 	})
 }
 
-// GET is a conveinence method for registering handlers
-func (rns *RouteNamespace) GET(path string, handlers ...HandlerFunc) {
-	if Settings.LogDebugMessages {
-		log.Printf("Registering GET: %s", path)
-	}
-
-	rns.Handle("GET", path, handlers)
-}
-
-// FILES creates a
+// FILES registers a url and directory path to serve static files. The webserver
+// will serve all static files in any directories under these paths. Executing
+// this method enables the static file server flag.
 func (rns *RouteNamespace) FILES(url string, path string) {
 
 	if !Settings.EnableStaticFileServer {
@@ -76,6 +69,15 @@ func (rns *RouteNamespace) FILES(url string, path string) {
 	Settings.staticDir[url] = path
 }
 
+// GET is a conveinence method for registering handlers
+func (rns *RouteNamespace) GET(path string, handlers ...HandlerFunc) {
+	if Settings.LogDebugMessages {
+		log.Printf("Registering GET: %s", path)
+	}
+
+	rns.Handle("GET", path, handlers)
+}
+
 // POST is a conveinence method for registering handlers
 func (rns *RouteNamespace) POST(path string, handlers ...HandlerFunc) {
 	if Settings.LogDebugMessages {
@@ -83,4 +85,13 @@ func (rns *RouteNamespace) POST(path string, handlers ...HandlerFunc) {
 	}
 
 	rns.Handle("POST", path, handlers)
+}
+
+// PUT is a conveinence method for registering handlers
+func (rns *RouteNamespace) PUT(path string, handlers ...HandlerFunc) {
+	if Settings.LogDebugMessages {
+		log.Printf("Registering PUT: %s", path)
+	}
+
+	rns.Handle("PUT", path, handlers)
 }

@@ -136,7 +136,7 @@ func (s *Server) Start(address string) {
 
 // ServeHTTP handles all requests of our web server
 func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	starttick := time.Now()
+	starttick := time.Now() // TODO Look at ticker? Inside time package.
 
 	requestPath := req.URL.Path
 

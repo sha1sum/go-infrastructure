@@ -91,6 +91,7 @@ func (input *Input) Is(method string) bool {
 
 // IsFormat returns true if the encoding format matches the test
 func (input *Input) IsFormat(test string) bool {
+	// FIXME Fix this is suppost to be data encoding
 	return input.Header("X-Requested-With") == test
 }
 
