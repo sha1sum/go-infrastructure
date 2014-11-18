@@ -5,6 +5,7 @@
 package webserver
 
 import (
+	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -13,7 +14,6 @@ import (
 
 	"git.wreckerlabs.com/in/webserver/context"
 	"git.wreckerlabs.com/in/webserver/render"
-	log "github.com/Sirupsen/logrus"
 	"github.com/julienschmidt/httprouter"
 )
 
@@ -46,7 +46,7 @@ const (
 )
 
 const (
-	packagename = "webserver:"
+	logprefix = "Package: webserver; Message: "
 	// defaultResponse404 is returned if the server is unable to render the response
 	// using the configured SystemTemplate. This can happen if a template file does not
 	// exist at the configured path.
@@ -63,6 +63,11 @@ type (
 		contextPool    sync.Pool          // Manage our RequestContext event pool
 		router         *httprouter.Router // Delegate to the httprouter package for performant route matching
 		MissingHandler []HandlerFunc
+
+		DebugLogger   *log.Logger
+		InfoLogger    *log.Logger
+		WarningLogger *log.Logger
+		ErrorLogger   *log.Logger
 	}
 
 	// Conventions define configuration and are set to our conventional, default
@@ -70,12 +75,6 @@ type (
 	Conventions struct {
 		// Reference to the conventions of the webserver's rendering engine
 		Render *render.Conventions
-		// LogDebugMessages if true, enables debug observation logging
-		LogDebugMessages bool
-		// LogWarningMessages if true, enables warning logging behavior.
-		LogWarningMessages bool
-		// LogErrorMessages if true, enables error logging behavior
-		LogErrorMessages bool
 		// EnableStaticFileServer if true, enables the serving of static assets such as CSS, JS, or other files.
 		EnableStaticFileServer bool
 		// StaticFilePath defines the releative root directory static files can be served from. Example "public" or "web-src/cdn/"
@@ -86,6 +85,8 @@ type (
 		SystemTemplates map[string]string
 		// A map of directory paths the webserver should serve static files from
 		staticDir map[string]string
+		// Flag requests that take longer than N miliseconds. Default is 250ms (1/4th a second)
+		RequestDurationWarning time.Duration
 	}
 )
 
@@ -94,28 +95,39 @@ var (
 	// webserver.
 	Settings = Conventions{
 		Render:                 &render.Settings,
-		LogDebugMessages:       false,
-		LogWarningMessages:     false,
-		LogErrorMessages:       true,
 		EnableStaticFileServer: false,
 		SystemTemplates: map[string]string{
 			"onMissingHandler": "errors/onMissingHandler",
 		},
-		staticDir: make(map[string]string),
+		staticDir:              make(map[string]string),
+		RequestDurationWarning: time.Second / 4,
 	}
 	// If we fail to find a configured onMissingHandler once we will stop looking
 	seekOnMissingHandler = true
 )
 
 // New returns a new WebServer.
-func New() *Server {
-	log.SetLevel(log.DebugLevel)
-	s := &Server{}
+func New(
+	debugLogger *log.Logger,
+	infoLogger *log.Logger,
+	warningLogger *log.Logger,
+	errorLogger *log.Logger) *Server {
+
+	s := &Server{
+		DebugLogger:   debugLogger,
+		InfoLogger:    infoLogger,
+		WarningLogger: warningLogger,
+		ErrorLogger:   errorLogger,
+	}
 	// Setup an initial route namespace
 	s.RouteNamespace = &RouteNamespace{
-		prefix: "/",
-		parent: nil,
-		server: s}
+		prefix:        "/",
+		parent:        nil,
+		server:        s,
+		DebugLogger:   debugLogger,
+		InfoLogger:    infoLogger,
+		WarningLogger: warningLogger,
+		ErrorLogger:   errorLogger}
 
 	s.router = httprouter.New()
 	s.router.NotFound = s.onMissingHandler
@@ -126,10 +138,10 @@ func New() *Server {
 // Start launches the webserver so that it begins listening and serving requests
 // on the desired address.
 func (s *Server) Start(address string) {
-	log.WithFields(log.Fields{"event": packagename + "Start", "topic": "ListenAndServe", "key": address}).Info("Starting")
+	s.InfoLogger.Printf(logprefix+"Starting webserver; Address: %s;", address)
 
 	if err := http.ListenAndServe(address, s); err != nil {
-		log.WithFields(log.Fields{"event": "Start", "topic": "ListenAndServe", "key": address}).Fatal("Unable to start webserver")
+		s.ErrorLogger.Printf(logprefix+"Unable to start; Address: %s; Error: %s", address, err.Error())
 		panic(err)
 	}
 }
@@ -142,16 +154,12 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	if Settings.EnableStaticFileServer {
 		for prefix, staticDir := range Settings.staticDir {
-			if Settings.LogDebugMessages {
-				log.WithFields(log.Fields{"event": packagename + "ServeHTTP", "topic": "Serve Static", "key": requestPath}).Debug("Evaluating static route")
-			}
+			s.DebugLogger.Printf(logprefix+"Evaluating static route; Path: %s;", requestPath)
 			if strings.HasPrefix(requestPath, prefix) {
 				filePath := staticDir + requestPath[len(prefix):]
 				fileInfo, err := os.Stat(filePath)
 				if err != nil {
-					if Settings.LogWarningMessages {
-						log.WithFields(log.Fields{"event": packagename + "ServeHTTP", "topic": "Serve Static", "key": requestPath}).Warn("Unable to load file")
-					}
+					s.WarningLogger.Printf(logprefix+"Static asset not found; Path: %s;", requestPath)
 					s.onMissingHandler(w, req)
 					return
 				}
@@ -160,9 +168,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 					s.onMissingHandler(w, req)
 				}
 
-				if Settings.LogDebugMessages {
-					log.WithFields(log.Fields{"event": packagename + "ServeHTTP", "topic": "Serve Static", "key": requestPath}).Debug("Serving file")
-				}
+				s.DebugLogger.Printf(logprefix+"Serving static asset; Path: %s;", requestPath)
 
 				// TODO: Enable gZIP support if allowed for css, js, etc.
 				http.ServeFile(w, req, filePath)
@@ -173,7 +179,12 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	s.router.ServeHTTP(w, req)
 
-	log.WithFields(log.Fields{"event": packagename + "ServeHTTP", "ms": time.Since(starttick) * time.Millisecond, "path": requestPath}).Info("Request complete")
+	duration := time.Since(starttick)
+	if duration >= Settings.RequestDurationWarning {
+		s.WarningLogger.Printf(logprefix+"Request complete; Path: %s; Duration: %fs", requestPath, duration.Seconds())
+	} else {
+		s.DebugLogger.Printf(logprefix+"Request complete; Path: %s; Duration: %fs", requestPath, duration.Seconds())
+	}
 }
 
 // captureRequest builds a new Event to model a request/response handled
@@ -197,13 +208,13 @@ func (s *Server) onMissingHandler(w http.ResponseWriter, req *http.Request) {
 	event.StatusCode = http.StatusNotFound
 	w.WriteHeader(event.StatusCode)
 
-	log.WithFields(log.Fields{"event": packagename + "onMissingHandler"}).Debug("Executing onMissingHandler")
+	s.DebugLogger.Printf(logprefix+"Executing onMissingHandler; Address: %s;", req.URL.Path)
 
 	if seekOnMissingHandler {
 		template := Settings.SystemTemplates["onMissingHandler"]
 		err := event.HTMLTemplate(template, nil)
 		if err != nil {
-			log.WithFields(log.Fields{"event": packagename + "onMissingHandler", "topic": "Configured Template", "key": template}).Error("Failed to render template")
+			s.ErrorLogger.Printf(logprefix+"Failed single attempt to load configured onMissingHandler template--serving default response; Path: %s;", template)
 			seekOnMissingHandler = false
 		}
 	}

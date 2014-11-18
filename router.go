@@ -1,11 +1,11 @@
 package webserver
 
 import (
+	"log"
 	"net/http"
 	"path"
 	"strings"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/julienschmidt/httprouter"
 )
 
@@ -15,6 +15,11 @@ type (
 		prefix string
 		parent *RouteNamespace
 		server *Server
+
+		DebugLogger   *log.Logger
+		InfoLogger    *log.Logger
+		WarningLogger *log.Logger
+		ErrorLogger   *log.Logger
 	}
 )
 
@@ -26,15 +31,11 @@ func (rns *RouteNamespace) buildPath(p string) string {
 func (rns *RouteNamespace) Handle(method string, path string, handlers []HandlerFunc) {
 	p := rns.buildPath(path)
 
-	if Settings.LogDebugMessages {
-		log.WithFields(log.Fields{"event": packagename + "Handle", "method": method, "path": p}).Debug("Registering handler")
-	}
+	rns.InfoLogger.Printf(logprefix+"Registering handler; Route: %s:%s; Quantity: %b", method, p, len(handlers))
 
 	// Serve the request
 	rns.server.router.Handle(method, path, func(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
-		if Settings.LogDebugMessages {
-			log.WithFields(log.Fields{"event": packagename + "Handle", "method": method, "path": path}).Info("Capturing request")
-		}
+		rns.DebugLogger.Printf(logprefix+"Capturing request; Route: %s:%s", method, path)
 		event := rns.server.captureRequest(w, req, nil, handlers)
 
 		// TODO Execute all handlers passed in their order stopping if one
@@ -53,7 +54,6 @@ func (rns *RouteNamespace) Handle(method string, path string, handlers []Handler
 // will serve all static files in any directories under these paths. Executing
 // this method enables the static file server flag.
 func (rns *RouteNamespace) FILES(url string, path string) {
-
 	if !Settings.EnableStaticFileServer {
 		Settings.EnableStaticFileServer = true
 	}
@@ -62,36 +62,22 @@ func (rns *RouteNamespace) FILES(url string, path string) {
 		url = "/" + url
 	}
 
-	if Settings.LogDebugMessages {
-		log.Printf("Registering static route %s -> %s", url, path)
-	}
+	rns.InfoLogger.Printf(logprefix+"Registering static file path; Path: `%s`; URL: `%s`;", path, url)
 
 	Settings.staticDir[url] = path
 }
 
 // GET is a conveinence method for registering handlers
 func (rns *RouteNamespace) GET(path string, handlers ...HandlerFunc) {
-	if Settings.LogDebugMessages {
-		log.Printf("Registering GET: %s", path)
-	}
-
 	rns.Handle("GET", path, handlers)
 }
 
 // POST is a conveinence method for registering handlers
 func (rns *RouteNamespace) POST(path string, handlers ...HandlerFunc) {
-	if Settings.LogDebugMessages {
-		log.Printf("Registering POST: %s", path)
-	}
-
 	rns.Handle("POST", path, handlers)
 }
 
 // PUT is a conveinence method for registering handlers
 func (rns *RouteNamespace) PUT(path string, handlers ...HandlerFunc) {
-	if Settings.LogDebugMessages {
-		log.Printf("Registering PUT: %s", path)
-	}
-
 	rns.Handle("PUT", path, handlers)
 }
