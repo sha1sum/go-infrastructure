@@ -42,11 +42,6 @@ func (rns *RouteNamespace) Handle(method string, path string, handlers []Handler
 		// chooses to write to the body unless we can/should simply append
 		// the event body.
 		handlers[0](event)
-
-		// Write the response to the client
-		if event.StatusCode == 0 {
-			//w.WriteHeader(event.StatusCode)
-		}
 	})
 }
 
