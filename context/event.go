@@ -56,6 +56,19 @@ func New(w http.ResponseWriter, req *http.Request, params httprouter.Params) *Co
 	return c
 }
 
+// *****************************************************************************
+// Handling Conveinence
+// *****************************************************************************
+// BadRequest issues a bad request
+func (c *Context) BadRequest(output []byte) {
+	c.Output.Status = http.StatusBadRequest
+	c.Output.Body(output)
+}
+
+// *****************************************************************************
+// Rendering
+// *****************************************************************************
+
 // HTML outputs the provided HTML string
 func (c *Context) HTML(output string) error {
 	c.Output.Body([]byte(output))
