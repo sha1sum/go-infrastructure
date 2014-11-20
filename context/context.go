@@ -7,18 +7,12 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/julienschmidt/httprouter"
-	"github.com/sdming/gosnow"
 )
-
-// Snowflake ID generator
-var snowflake, _ = gosnow.Default()
 
 // Context is created on every request and models the event, or request.
 // The webserver will populate a RequestContext with any data provided by the
 // client from a form, URL, or recognized data type sent in the request body.
 type Context struct {
-	// ID is generated for each new RequestContext.
-	id uint64 `json:"requestID"`
 	// RequestContentLength contains a count of incoming bytes.
 	RequestContentLength int `json:"requestContentLength"`
 	// ResponseContentLength contains a count of outgoing bytes.
@@ -38,12 +32,6 @@ type Context struct {
 func New(w http.ResponseWriter, req *http.Request, params httprouter.Params) *Context {
 	var c = new(Context)
 
-	id, err := snowflake.Next()
-	if err != nil {
-		panic("Snowflake failed?")
-	}
-	c.id = id
-
 	c.Input = NewInput(req)
 	c.Output = NewOutput(c)
 	c.Request = req
@@ -59,9 +47,16 @@ func New(w http.ResponseWriter, req *http.Request, params httprouter.Params) *Co
 // *****************************************************************************
 // Handling Conveinence
 // *****************************************************************************
+
 // BadRequest issues a bad request
 func (c *Context) BadRequest(output []byte) {
 	c.Output.Status = http.StatusBadRequest
+	c.Output.Body(output)
+}
+
+// InternalError issues a 500 Internal Server Errror
+func (c *Context) InternalError(output []byte) {
+	c.Output.Status = http.StatusInternalServerError
 	c.Output.Body(output)
 }
 
