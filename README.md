@@ -30,8 +30,7 @@ Use GO's get command to download the source code. The go get
 command will use your git installation to download the source code and download
 any dependent GO packages from their repositories. The source code will be
 downloaded into your $GO_PATH directory. See the GO documentation if you
-run into trouble. To download the source code run the following command:
-``go get git.wreckerlabs.com/in/webserver``
+run into trouble.
 
 ## Compiling
 
