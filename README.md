@@ -4,12 +4,6 @@ The Webserver Infrastructure is responsible for managing common webserver
 behavior so other Wrecker Labs projects can focus on business value. The code
 in this repository may be included into other projects as a go package.
 
-#### Links
-* [Confluence Project Management](https://wreckingball.atlassian.net/wiki/display/IN/) - Project plan, meetings, etc.
-* [JIRA Issue Tracker](https://wreckingball.atlassian.net/browse/IN/) - All infrastructure work tickets are managed through a single Infrastructure JIRA Project
-* [Jenkins Build Server](http://home.aarongreenlee.com:8080/) - CI Server
-* [Stash Git Version Control](http://git.wreckerlabs.com/projects/IN) - Source Code Repository
-
 # Known Bugs
 A version has not yet shipped.
 
