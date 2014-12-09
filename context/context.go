@@ -3,7 +3,7 @@ package context
 import (
 	"net/http"
 
-	"git.wreckerlabs.com/in/webserver/render"
+	"github.com/wreckerlabs/webserver/render"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/julienschmidt/httprouter"
