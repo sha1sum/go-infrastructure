@@ -12,8 +12,8 @@ import (
 	"sync"
 	"time"
 
-	"git.wreckerlabs.com/in/webserver/context"
-	"git.wreckerlabs.com/in/webserver/render"
+	"github.com/wreckerlabs/webserver/context"
+	"github.com/wreckerlabs/webserver/render"
 	"github.com/julienschmidt/httprouter"
 )
 
