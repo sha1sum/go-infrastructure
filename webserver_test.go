@@ -1,7 +1,7 @@
 package webserver_test
 
 import (
-	. "git.wreckerlabs.com/in/webserver"
+	. "github.com/wreckerlabs/webserver"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
