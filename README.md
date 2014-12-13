@@ -1,8 +1,22 @@
 # Webserver Infrastructure
 
-The Webserver Infrastructure is responsible for managing common webserver
-behavior so other Wrecker Labs projects can focus on business value. The code
-in this repository may be included into other projects as a go package.
+This package has been open sourced in hopes some other gopher finds it helpful.
+This package was not open sourced in hopes of becoming a really popular framework.
+
+**What is this package all about?**
+The Webserver provides infrastructure for Wrecker Labs products and services
+and is responsible for managing common webserver behavior so other Wrecker Labs
+projects can focus on value.
+
+This Webserver does not support the standard GO http interface but you can
+easily work with handlers that do if you'd like. What this Webserver does do is
+make it easier for Wrecker Labs to build the experiences we need by providing
+the following:
+
+* Several convenience methods for working with input and output
+* Means of passing information between handlers without requiring locking
+* The ability to execute pre-handlers, post-handlers, and wrap handlers for custom behavior.
+* Building blocks to help you auto-document handler/endpoint behavior.
 
 # Known Bugs
 A version has not yet shipped.
