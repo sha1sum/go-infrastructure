@@ -12,9 +12,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/julienschmidt/httprouter"
 	"github.com/wreckerlabs/webserver/context"
 	"github.com/wreckerlabs/webserver/render"
-	"github.com/julienschmidt/httprouter"
 )
 
 const (
@@ -54,9 +54,6 @@ const (
 )
 
 type (
-	// HandlerFunc is a request event handler and accepts a RequestContext
-	HandlerFunc func(*context.Context)
-
 	// Server represents an instance of the webserver.
 	Server struct {
 		*RouteNamespace
@@ -70,8 +67,7 @@ type (
 		ErrorLogger   *log.Logger
 	}
 
-	// Conventions define configuration and are set to our conventional, default
-	// values.
+	// Conventions defines our configuration.
 	Conventions struct {
 		// Reference to the conventions of the webserver's rendering engine
 		Render *render.Conventions
@@ -87,6 +83,37 @@ type (
 		staticDir map[string]string
 		// Flag requests that take longer than N miliseconds. Default is 250ms (1/4th a second)
 		RequestDurationWarning time.Duration
+	}
+
+	// HandlerFunc is a request event handler and accepts a RequestContext
+	HandlerFunc func(*context.Context)
+
+	// HandlerDef provides for a system to organize HandlerFunc metadata. Use of a
+	// HandlerDef to describe a HandlerFunc is not required but provides a way
+	// to eaisly configure advanced behavior and document that behavior.
+	//
+	// This abstraction binds documentation to implementation. This tight
+	// coupeling between the two helps reduce documentaton buridens and
+	// ensures documentation is kept current.
+	HandlerDef struct {
+		// A string to name the handler
+		Alias string
+		// The method to interact with the handler (i.e. GET or POST)
+		Method string
+		// The URL Path to access the handler
+		Path string
+		// The location of a HTML file describing the HandlerDef behavior in detail.
+		Documentation string
+		// The maximum time this HandlerFunc should take to process. This information is useful for performance testing.
+		DurationExpectation string
+		// An optional reference to a structure containing input paramaters for the HandlerFunc.
+		Params interface{}
+		// The handler to register
+		Handler HandlerFunc
+		// A chain of handlers to process before executing the primary HandlerFunc
+		PreHandlers []HandlerDef
+		// A chain of handlers to process after executing the primary HandlerFunc
+		PostHandlers []HandlerDef
 	}
 )
 
@@ -122,7 +149,6 @@ func New(
 	// Setup an initial route namespace
 	s.RouteNamespace = &RouteNamespace{
 		prefix:        "/",
-		parent:        nil,
 		server:        s,
 		DebugLogger:   debugLogger,
 		InfoLogger:    infoLogger,
@@ -133,6 +159,47 @@ func New(
 	s.router.NotFound = s.onMissingHandler
 
 	return s
+}
+
+// RegisterHandlerDefs accepts a slice of HandlerDefs and registers each
+func (s Server) RegisterHandlerDefs(h []HandlerDef) {
+	for _, hd := range h {
+		s.RegisterHandlerDef(hd)
+	}
+}
+
+// RegisterHandlerDef accepts a HandlerDef and registers it's behavior with the
+// webserver.
+func (s Server) RegisterHandlerDef(h HandlerDef) {
+	chain := []HandlerFunc{}
+
+	// Pre
+	for _, a := range h.PreHandlers {
+		chain = append(chain, a.Handler)
+	}
+	// Target
+	chain = append(chain, h.Handler)
+	// Post
+	for _, a := range h.PostHandlers {
+		chain = append(chain, a.Handler)
+	}
+
+	// Register
+	switch h.Method {
+	case "GET":
+		fallthrough
+	case "PUT":
+		fallthrough
+	case "DELETE":
+		fallthrough
+	case "POST":
+		s.Handle(h.Method, h.Path, chain)
+
+	case "":
+		// do nothing--middleware only
+	default:
+		panic("Endpoint type unknown: " + h.Method)
+	}
 }
 
 // Start launches the webserver so that it begins listening and serving requests

@@ -13,7 +13,6 @@ type (
 	// RouteNamespace groups routes according to a specific URL entry point or prefix.
 	RouteNamespace struct {
 		prefix string
-		parent *RouteNamespace
 		server *Server
 
 		DebugLogger   *log.Logger
@@ -41,7 +40,11 @@ func (rns *RouteNamespace) Handle(method string, path string, handlers []Handler
 		// TODO Execute all handlers passed in their order stopping if one
 		// chooses to write to the body unless we can/should simply append
 		// the event body.
-		handlers[0](event)
+		// handlers[0](event)
+		for _, h := range handlers {
+			rns.DebugLogger.Printf("Running Handler %v", h)
+			h(event)
+		}
 	})
 }
 
