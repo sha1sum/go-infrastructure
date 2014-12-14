@@ -61,6 +61,10 @@ type (
 		router         *httprouter.Router // Delegate to the httprouter package for performant route matching
 		MissingHandler []HandlerFunc
 
+		// HandlerDef maintains a map of all registered handler definitions
+		HandlerDef      map[string]HandlerDef
+		handlerDefMutex sync.Mutex
+
 		DebugLogger   *log.Logger
 		InfoLogger    *log.Logger
 		WarningLogger *log.Logger
@@ -145,6 +149,8 @@ func New(
 		InfoLogger:    infoLogger,
 		WarningLogger: warningLogger,
 		ErrorLogger:   errorLogger,
+
+		HandlerDef: make(map[string]HandlerDef),
 	}
 	// Setup an initial route namespace
 	s.RouteNamespace = &RouteNamespace{
@@ -162,7 +168,7 @@ func New(
 }
 
 // RegisterHandlerDefs accepts a slice of HandlerDefs and registers each
-func (s Server) RegisterHandlerDefs(h []HandlerDef) {
+func (s *Server) RegisterHandlerDefs(h []HandlerDef) {
 	for _, hd := range h {
 		s.RegisterHandlerDef(hd)
 	}
@@ -170,7 +176,7 @@ func (s Server) RegisterHandlerDefs(h []HandlerDef) {
 
 // RegisterHandlerDef accepts a HandlerDef and registers it's behavior with the
 // webserver.
-func (s Server) RegisterHandlerDef(h HandlerDef) {
+func (s *Server) RegisterHandlerDef(h HandlerDef) {
 	chain := []HandlerFunc{}
 
 	// Pre
@@ -198,8 +204,14 @@ func (s Server) RegisterHandlerDef(h HandlerDef) {
 	case "":
 		// do nothing--middleware only
 	default:
-		panic("Endpoint type unknown: " + h.Method)
+		panic("Unable to register handler due to unknown method: " + h.Method)
 	}
+
+	// Register the handler def for auto-documentation
+	s.handlerDefMutex.Lock()
+	defer s.handlerDefMutex.Unlock()
+
+	s.HandlerDef[h.Method+":"+h.Path] = h
 }
 
 // Start launches the webserver so that it begins listening and serving requests

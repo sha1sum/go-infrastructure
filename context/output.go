@@ -48,17 +48,8 @@ func (output *Output) Header(key string, value string) {
 	output.Context.ResponseWriter.Header().Set(key, value)
 }
 
-/*
-// Body writes the response to the client
-func (output *Output) Body(content []byte) {
-	output.Header("Content-Length", strconv.Itoa(len(content)))
-	output.Context.ResponseWriter.Write(content)
-}
-*/
-
 // JSON is a conveinence method for writing JSON to the response body
 func (output *Output) JSON(data interface{}, indent bool) error {
-
 	output.Header("Content-Type", "application/json;charset=UTF-8")
 
 	var content []byte
