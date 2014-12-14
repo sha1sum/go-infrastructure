@@ -32,7 +32,7 @@ for your environment.
 * Ensure you have access to the source repository and database environments.
 
 #### Required Software
-1. [Go Distribution v1.3](http://golang.org/doc/install) distribution for your
+1. [Go Distribution v1.4](http://golang.org/doc/install) distribution for your
 system.
 2. A working ``git`` installation and a registered ``ssh-key`` for the
 repository.
