@@ -55,9 +55,20 @@ func (c *Context) BadRequest(output []byte) {
 }
 
 // InternalError issues a 500 Internal Server Errror
-func (c *Context) InternalError(output []byte) {
+func (c *Context) InternalError(output interface{}) {
 	c.Output.Status = http.StatusInternalServerError
-	c.Output.Body(output)
+
+	switch output.(type) {
+	case error:
+		c.Output.Body([]byte(output.(error).Error()))
+	case []byte:
+		c.Output.Body(output.([]byte))
+	case string:
+		c.Output.Body([]byte(output.(string)))
+	default:
+		c.Output.Body([]byte("Internal Server Error"))
+	}
+
 }
 
 // *****************************************************************************
