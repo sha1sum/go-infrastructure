@@ -233,7 +233,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	if Settings.EnableStaticFileServer {
 		for prefix, staticDir := range Settings.staticDir {
-			s.DebugLogger.Printf(logprefix+"Evaluating static route; Path: %s;", requestPath)
+			s.DebugLogger.Printf(logprefix+"Evaluating static route; Path: %s:%s;", req.Method, requestPath)
 			if strings.HasPrefix(requestPath, prefix) {
 				filePath := staticDir + requestPath[len(prefix):]
 				fileInfo, err := os.Stat(filePath)
