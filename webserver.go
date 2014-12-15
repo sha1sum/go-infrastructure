@@ -12,9 +12,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/aarongreenlee/webserver/context"
+	"github.com/aarongreenlee/webserver/render"
 	"github.com/julienschmidt/httprouter"
-	"github.com/wreckerlabs/webserver/context"
-	"github.com/wreckerlabs/webserver/render"
 )
 
 const (
@@ -50,7 +50,7 @@ const (
 	// defaultResponse404 is returned if the server is unable to render the response
 	// using the configured SystemTemplate. This can happen if a template file does not
 	// exist at the configured path.
-	defaultResponse404 = `<html><head><title>404 Not Found</title><style>body{background-color:black;color:white;margin:20%;}</style></head><body><center><h1>404 Not Found</h1><hr><p>WreckerLabs Webserver</p></center></body></html>`
+	defaultResponse404 = `<html><head><title>404 Not Found</title><style>body{background-color:black;color:white;margin:20%;}</style></head><body><center><h1>404 Not Found</h1></center></body></html>`
 )
 
 type (
