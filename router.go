@@ -37,12 +37,10 @@ func (rns *RouteNamespace) Handle(method string, path string, handlers []Handler
 		rns.DebugLogger.Printf(logprefix+"Capturing request; Route: %s:%s", method, path)
 		event := rns.server.captureRequest(w, req, nil, handlers)
 
-		// TODO Execute all handlers passed in their order stopping if one
-		// chooses to write to the body unless we can/should simply append
-		// the event body.
-		// handlers[0](event)
 		for _, h := range handlers {
-			rns.DebugLogger.Printf("Running Handler %v", h)
+			// TODO - Look into the context to see if we have already written headers
+			// or something that would preclude us from executing the other handlers
+			// in the chain
 			h(event)
 		}
 	})
