@@ -112,6 +112,8 @@ type (
 		DurationExpectation string
 		// An optional reference to a structure containing input paramaters for the HandlerFunc.
 		Params interface{}
+		// An optional reference to a structure containing output for successful HandlerFunc calls.
+		Response interface{}
 		// The handler to register
 		Handler HandlerFunc
 		// A chain of handlers to process before executing the primary HandlerFunc
