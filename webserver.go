@@ -282,16 +282,16 @@ func (s *Server) captureRequest(
 // onMissingHandler replies to the request with an HTTP 404 not found error.
 // This function is triggered when we are unable to match a route.
 func (s *Server) onMissingHandler(w http.ResponseWriter, req *http.Request) {
-	event := s.captureRequest(w, req, nil, s.MissingHandler)
+	context := s.captureRequest(w, req, nil, s.MissingHandler)
 
-	event.StatusCode = http.StatusNotFound
-	w.WriteHeader(event.StatusCode)
+	context.Output.Status = http.StatusNotFound
+	//w.WriteHeader(context.Output.Status)
 
 	s.DebugLogger.Printf(logprefix+"Executing onMissingHandler; Address: %s;", req.URL.Path)
 
 	if seekOnMissingHandler {
 		template := Settings.SystemTemplates["onMissingHandler"]
-		err := event.HTMLTemplate(template, nil)
+		err := context.HTMLTemplate(template, nil)
 		if err != nil {
 			s.ErrorLogger.Printf(logprefix+"Failed single attempt to load configured onMissingHandler template--serving default response; Path: %s;", template)
 			seekOnMissingHandler = false
@@ -299,6 +299,6 @@ func (s *Server) onMissingHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	if !seekOnMissingHandler {
-		event.Output.Body([]byte(defaultResponse404))
+		context.Output.Body([]byte(defaultResponse404))
 	}
 }
