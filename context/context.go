@@ -14,11 +14,9 @@ import (
 // client from a form, URL, or recognized data type sent in the request body.
 type Context struct {
 	// RequestContentLength contains a count of incoming bytes.
-	RequestContentLength int `json:"requestContentLength"`
+	RequestContentLength int
 	// ResponseContentLength contains a count of outgoing bytes.
-	ResponseContentLength int `json:"requestContentLength"`
-	// StatusCode
-	StatusCode int `json:"statusCode"`
+	ResponseContentLength int
 
 	renderer render.Renderer
 
