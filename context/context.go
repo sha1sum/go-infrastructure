@@ -47,9 +47,19 @@ func New(w http.ResponseWriter, req *http.Request, params httprouter.Params) *Co
 // *****************************************************************************
 
 // BadRequest issues a bad request
-func (c *Context) BadRequest(output []byte) {
+func (c *Context) BadRequest(output interface{}) {
 	c.Output.Status = http.StatusBadRequest
-	c.Output.Body(output)
+
+	switch output.(type) {
+	case error:
+		c.Output.Body([]byte(output.(error).Error()))
+	case []byte:
+		c.Output.Body(output.([]byte))
+	case string:
+		c.Output.Body([]byte(output.(string)))
+	default:
+		c.Output.Body([]byte("Bad Request"))
+	}
 }
 
 // InternalError issues a 500 Internal Server Errror
