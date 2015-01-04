@@ -114,6 +114,8 @@ type (
 		Params interface{}
 		// An optional reference to a structure containing output for successful HandlerFunc calls.
 		Response interface{}
+		// An optional reference to a map describing extra headers for the HandlerFunc (input or output)
+		Headers map[string]string
 		// The handler to register
 		Handler HandlerFunc
 		// A chain of handlers to process before executing the primary HandlerFunc
