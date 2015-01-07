@@ -18,6 +18,8 @@ type (
 		LogErrorMessages   bool
 		LogTemplateResults bool
 		CacheTemplates     bool
+		DelimPrefix        string
+		DelimSuffix        string
 	}
 
 	// Renderer is an interface type that different renderers should implement
@@ -42,6 +44,8 @@ var Settings = Conventions{
 	LogErrorMessages:   true,
 	LogTemplateResults: false,
 	CacheTemplates:     true,
+	DelimPrefix:        "{",
+	DelimSuffix:        "}",
 }
 
 var (
@@ -81,7 +85,7 @@ func executeTemplate(file string, data interface{}) (body []byte, err error) {
 		t = template.New(filepath.Base(file))
 
 		// Enhance our template with custom format so we can reuse with JS libs?
-		// t.Delims("<%=", ">")
+		t.Delims(Settings.DelimPrefix, Settings.DelimPrefix)
 		_, err = t.ParseFiles(file)
 		if err != nil {
 			log.WithFields(log.Fields{"event": packagename + "Render", "file": file, "error": err}).Error("Unable to parse template")
