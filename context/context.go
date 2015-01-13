@@ -87,6 +87,8 @@ func (c *Context) InternalError(output interface{}) {
 
 // HTML outputs the provided HTML string
 func (c *Context) HTML(output string) error {
+    
+    c.Output.Header("Content-Type", "text/html")
 	c.Output.Body([]byte(output))
 
 	return nil
@@ -94,11 +96,13 @@ func (c *Context) HTML(output string) error {
 
 // HTMLTemplate renders the HTML view specified by it's filename omitting the file extension.
 func (c *Context) HTMLTemplate(name string, args interface{}) error {
+    
 	content, err := render.HTML.Render(name, args)
 	if err != nil {
 		return err
 	}
 
+    c.Output.Header("Content-Type", "text/html")
 	c.Output.Body(content)
 
 	return nil
