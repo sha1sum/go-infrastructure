@@ -24,6 +24,7 @@ type Context struct {
 	Output         *Output
 	Request        *http.Request
 	ResponseWriter http.ResponseWriter
+    Params   httprouter.Params
 }
 
 // New produces a new request context event.
@@ -34,6 +35,7 @@ func New(w http.ResponseWriter, req *http.Request, params httprouter.Params) *Co
 	c.Output = NewOutput(c)
 	c.Request = req
 	c.ResponseWriter = w
+    c.Params = params
 
 	if c.Input.Is("POST") || c.Input.Is("PUT") {
 		c.Input.Body()

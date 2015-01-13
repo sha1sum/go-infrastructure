@@ -35,7 +35,7 @@ func (rns *RouteNamespace) Handle(method string, path string, handlers []Handler
 	// Serve the request
 	rns.server.router.Handle(method, path, func(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
 		rns.DebugLogger.Printf(logprefix+"Capturing request; Route: %s:%s", method, path)
-		event := rns.server.captureRequest(w, req, nil, handlers)
+		event := rns.server.captureRequest(w, req, params, handlers)
 
 		for _, h := range handlers {
 			// TODO - Look into the context to see if we have already written headers
