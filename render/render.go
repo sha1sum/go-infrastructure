@@ -85,7 +85,7 @@ func executeTemplate(file string, data interface{}) (body []byte, err error) {
 		t = template.New(filepath.Base(file))
 
 		// Enhance our template with custom format so we can reuse with JS libs?
-		t.Delims(Settings.DelimPrefix, Settings.DelimPrefix)
+		t.Delims(Settings.DelimPrefix, Settings.DelimSuffix)
 		_, err = t.ParseFiles(file)
 		if err != nil {
 			log.WithFields(log.Fields{"event": packagename + "Render", "file": file, "error": err}).Error("Unable to parse template")
