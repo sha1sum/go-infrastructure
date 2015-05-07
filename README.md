@@ -9,16 +9,12 @@ so gophers can focus on value.
 
 This Webserver does not support the standard GO http interface but you can
 easily work with handlers that do if you'd like. What this Webserver does do is
-make it easier for gophers to build the experiences we need by providing
-the following:
+make it easier for gophers to build the kind of applications and platforms expected in my experieinces working with companies like Adobe, Dolby, TimeWarner Cable, and more. The basic building blocks and objectives of this package are to provide the following:
 
 * Several convenience methods for working with input and output
 * Means of passing information between handlers without requiring locking
 * The ability to execute pre-handlers, post-handlers, and wrap handlers for custom behavior.
 * Building blocks to help you auto-document handler/endpoint behavior.
-
-# Known Bugs
-A version has not yet shipped.
 
 # Developing the Webserver Infrastructure
 
