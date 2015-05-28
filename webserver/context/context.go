@@ -3,7 +3,7 @@ package context
 import (
 	"net/http"
 
-	"github.com/aarongreenlee/webserver/render"
+	"github.com/aarongreenlee/go-infrastructure/webserver/render"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/julienschmidt/httprouter"
@@ -24,7 +24,7 @@ type Context struct {
 	Output         *Output
 	Request        *http.Request
 	ResponseWriter http.ResponseWriter
-    Params   httprouter.Params
+	Params         httprouter.Params
 }
 
 // New produces a new request context event.
@@ -35,7 +35,7 @@ func New(w http.ResponseWriter, req *http.Request, params httprouter.Params) *Co
 	c.Output = NewOutput(c)
 	c.Request = req
 	c.ResponseWriter = w
-    c.Params = params
+	c.Params = params
 
 	if c.Input.Is("POST") || c.Input.Is("PUT") {
 		c.Input.Body()
@@ -87,8 +87,8 @@ func (c *Context) InternalError(output interface{}) {
 
 // HTML outputs the provided HTML string
 func (c *Context) HTML(output string) error {
-    
-    c.Output.Header("Content-Type", "text/html")
+
+	c.Output.Header("Content-Type", "text/html")
 	c.Output.Body([]byte(output))
 
 	return nil
@@ -96,13 +96,13 @@ func (c *Context) HTML(output string) error {
 
 // HTMLTemplate renders the HTML view specified by it's filename omitting the file extension.
 func (c *Context) HTMLTemplate(name string, args interface{}) error {
-    
+
 	content, err := render.HTML.Render(name, args)
 	if err != nil {
 		return err
 	}
 
-    c.Output.Header("Content-Type", "text/html")
+	c.Output.Header("Content-Type", "text/html")
 	c.Output.Body(content)
 
 	return nil

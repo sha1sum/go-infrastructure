@@ -1,7 +1,7 @@
 package logger
 
-// LogFields allows key/value pairs to be logged with Context calls
-type LogFields map[string]interface{}
+// Fields allows key/value pairs to be logged with Context calls
+type Fields map[string]interface{}
 
 // Logger logs messages at different severity levels.
 type Logger interface {
@@ -15,7 +15,7 @@ type Logger interface {
 	Errorf(format string, args ...interface{})
 	Fatal(args ...interface{})
 	Fatalf(format string, args ...interface{})
-	Context(logfields LogFields) ContextualLogger
+	Context(fields Fields) ContextualLogger
 }
 
 // ContextualLogger provides the same logging methods as Logger but adds

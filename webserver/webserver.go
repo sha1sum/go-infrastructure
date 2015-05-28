@@ -5,15 +5,15 @@
 package webserver
 
 import (
-	"log"
 	"net/http"
 	"os"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/aarongreenlee/webserver/context"
-	"github.com/aarongreenlee/webserver/render"
+	"github.com/aarongreenlee/go-infrastructure/logger"
+	"github.com/aarongreenlee/go-infrastructure/webserver/context"
+	"github.com/aarongreenlee/go-infrastructure/webserver/render"
 	"github.com/julienschmidt/httprouter"
 )
 
@@ -46,7 +46,6 @@ const (
 )
 
 const (
-	logprefix = "Package: webserver; Message: "
 	// defaultResponse404 is returned if the server is unable to render the response
 	// using the configured SystemTemplate. This can happen if a template file does not
 	// exist at the configured path.
@@ -65,10 +64,7 @@ type (
 		HandlerDef      map[string]HandlerDef
 		handlerDefMutex sync.Mutex
 
-		DebugLogger   *log.Logger
-		InfoLogger    *log.Logger
-		WarningLogger *log.Logger
-		ErrorLogger   *log.Logger
+		logger logger.Logger
 	}
 
 	// Conventions defines our configuration.
@@ -143,27 +139,17 @@ var (
 
 // New returns a new WebServer.
 func New(
-	debugLogger *log.Logger,
-	infoLogger *log.Logger,
-	warningLogger *log.Logger,
-	errorLogger *log.Logger) *Server {
+	logger logger.Logger) *Server {
 
 	s := &Server{
-		DebugLogger:   debugLogger,
-		InfoLogger:    infoLogger,
-		WarningLogger: warningLogger,
-		ErrorLogger:   errorLogger,
-
+		logger:     logger,
 		HandlerDef: make(map[string]HandlerDef),
 	}
 	// Setup an initial route namespace
 	s.RouteNamespace = &RouteNamespace{
-		prefix:        "/",
-		server:        s,
-		DebugLogger:   debugLogger,
-		InfoLogger:    infoLogger,
-		WarningLogger: warningLogger,
-		ErrorLogger:   errorLogger}
+		prefix: "/",
+		server: s,
+		logger: logger}
 
 	s.router = httprouter.New()
 	s.router.NotFound = s.onMissingHandler
@@ -221,10 +207,10 @@ func (s *Server) RegisterHandlerDef(h HandlerDef) {
 // Start launches the webserver so that it begins listening and serving requests
 // on the desired address.
 func (s *Server) Start(address string) {
-	s.InfoLogger.Printf(logprefix+"Starting webserver; Address: %s;", address)
+	//s.InfoLogger.Printf(logprefix+"Starting webserver; Address: %s;", address)
 
 	if err := http.ListenAndServe(address, s); err != nil {
-		s.ErrorLogger.Printf(logprefix+"Unable to start; Address: %s; Error: %s", address, err.Error())
+		//s.ErrorLogger.Printf(logprefix+"Unable to start; Address: %s; Error: %s", address, err.Error())
 		panic(err)
 	}
 }
@@ -237,12 +223,12 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	if Settings.EnableStaticFileServer {
 		for prefix, staticDir := range Settings.staticDir {
-			s.DebugLogger.Printf(logprefix+"Evaluating static route; Path: %s:%s;", req.Method, requestPath)
+			//s.DebugLogger.Printf(logprefix+"Evaluating static route; Path: %s:%s;", req.Method, requestPath)
 			if strings.HasPrefix(requestPath, prefix) {
 				filePath := staticDir + requestPath[len(prefix):]
 				fileInfo, err := os.Stat(filePath)
 				if err != nil {
-					s.WarningLogger.Printf(logprefix+"Static asset not found; Path: %s;", requestPath)
+					//s.WarningLogger.Printf(logprefix+"Static asset not found; Path: %s;", requestPath)
 					s.onMissingHandler(w, req)
 					return
 				}
@@ -251,7 +237,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 					s.onMissingHandler(w, req)
 				}
 
-				s.DebugLogger.Printf(logprefix+"Serving static asset; Path: %s;", requestPath)
+				//s.DebugLogger.Printf(logprefix+"Serving static asset; Path: %s;", requestPath)
 
 				// TODO: Enable gZIP support if allowed for css, js, etc.
 				http.ServeFile(w, req, filePath)
@@ -264,9 +250,9 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	duration := time.Since(starttick)
 	if duration >= Settings.RequestDurationWarning {
-		s.WarningLogger.Printf(logprefix+"Request complete; Path: %s; Duration: %fs", requestPath, duration.Seconds())
+		//s.WarningLogger.Printf(logprefix+"Request complete; Path: %s; Duration: %fs", requestPath, duration.Seconds())
 	} else {
-		s.DebugLogger.Printf(logprefix+"Request complete; Path: %s; Duration: %fs", requestPath, duration.Seconds())
+		//s.DebugLogger.Printf(logprefix+"Request complete; Path: %s; Duration: %fs", requestPath, duration.Seconds())
 	}
 }
 
@@ -291,13 +277,13 @@ func (s *Server) onMissingHandler(w http.ResponseWriter, req *http.Request) {
 	context.Output.Status = http.StatusNotFound
 	//w.WriteHeader(context.Output.Status)
 
-	s.DebugLogger.Printf(logprefix+"Executing onMissingHandler; Address: %s;", req.URL.Path)
+	//s.DebugLogger.Printf(logprefix+"Executing onMissingHandler; Address: %s;", req.URL.Path)
 
 	if seekOnMissingHandler {
 		template := Settings.SystemTemplates["onMissingHandler"]
 		err := context.HTMLTemplate(template, nil)
 		if err != nil {
-			s.ErrorLogger.Printf(logprefix+"Failed single attempt to load configured onMissingHandler template--serving default response; Path: %s;", template)
+			//s.ErrorLogger.Printf(logprefix+"Failed single attempt to load configured onMissingHandler template--serving default response; Path: %s;", template)
 			seekOnMissingHandler = false
 		}
 	}

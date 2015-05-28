@@ -17,7 +17,7 @@ type Log struct {
 	info  bool
 }
 
-var _ Logger = &Log{}
+//var _ Logger = &Log{}
 
 // Context wraps the standard Logger methods with additional context.
 type Context struct {
@@ -27,11 +27,11 @@ type Context struct {
 
 var _ ContextualLogger = &Context{}
 
-// NewLogger creates a Logger and accepts a flag for each log level
+// New creates a Logger and accepts a flag for each log level
 // Debug and Info level logging can be disabled.
 // Log levels Warn, Error, and Fatal are always logged.
 // If debug, all calls will also log caller informaton.
-func NewLogger(debug bool, info bool) *Log {
+func New(debug bool, info bool) *Log {
 	text := logrus.New()
 	text.Level = logrus.DebugLevel
 	text.Formatter = &logrus.TextFormatter{ForceColors: true}
@@ -151,11 +151,11 @@ func (l *Log) Fatalf(format string, args ...interface{}) {
 // repeatedly within a specific context. Context should be passed an even
 // number of key/value values such as:
 // logger.Context("foo", 123).Debug("msg")
-func (l *Log) Context(logfields LogFields) ContextualLogger {
-	fields := logrus.Fields{}
+func (l *Log) Context(fields Fields) ContextualLogger {
+	f := logrus.Fields{}
 
-	for k, v := range logfields {
-		fields[k] = v
+	for k, v := range fields {
+		f[k] = v
 	}
 
 	if l.debug {
@@ -165,7 +165,7 @@ func (l *Log) Context(logfields LogFields) ContextualLogger {
 	}
 
 	return &Context{
-		fields: fields,
+		fields: f,
 		logger: l,
 	}
 }

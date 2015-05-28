@@ -44,8 +44,8 @@ var Settings = Conventions{
 	LogErrorMessages:   true,
 	LogTemplateResults: false,
 	CacheTemplates:     true,
-	DelimPrefix:        "{",
-	DelimSuffix:        "}",
+	DelimPrefix:        "{{",
+	DelimSuffix:        "}}",
 }
 
 var (
