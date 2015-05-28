@@ -4,8 +4,8 @@ import (
 	"log"
 	"os"
 
-	"github.com/aarongreenlee/webserver"
-	"github.com/aarongreenlee/webserver/context"
+	"github.com/aarongreenlee/go-infrastructure/webserver"
+	"github.com/aarongreenlee/go-infrastructure/webserver/context"
 )
 
 var (

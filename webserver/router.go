@@ -1,11 +1,11 @@
 package webserver
 
 import (
-	"log"
 	"net/http"
 	"path"
 	"strings"
 
+	"github.com/aarongreenlee/go-infrastructure/logger"
 	"github.com/julienschmidt/httprouter"
 )
 
@@ -15,10 +15,7 @@ type (
 		prefix string
 		server *Server
 
-		DebugLogger   *log.Logger
-		InfoLogger    *log.Logger
-		WarningLogger *log.Logger
-		ErrorLogger   *log.Logger
+		logger logger.Logger
 	}
 )
 
@@ -28,13 +25,20 @@ func (rns *RouteNamespace) buildPath(p string) string {
 
 // Handle registers handlers!
 func (rns *RouteNamespace) Handle(method string, path string, handlers []HandlerFunc) {
-	p := rns.buildPath(path)
+	//p := rns.buildPath(path)
 
-	rns.InfoLogger.Printf(logprefix+"Registering handler; Route: %s:%s; Quantity: %b", method, p, len(handlers))
+	/*
+		rns.logger.Context(logger.Fields{
+			"method":       method,
+			"path":         p,
+			"handlerCount": len(handlers),
+		}.Info("Registering handler"))
+	*/
+	//rns.logger.Debugf("Registering handler; Route: %s:%s; Quantity: %b", method, p, len(handlers))
 
 	// Serve the request
 	rns.server.router.Handle(method, path, func(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
-		rns.DebugLogger.Printf(logprefix+"Capturing request; Route: %s:%s", method, path)
+		//rns.DebugLogger.Printf(logprefix+"Capturing request; Route: %s:%s", method, path)
 		event := rns.server.captureRequest(w, req, params, handlers)
 
 		for _, h := range handlers {
@@ -58,7 +62,7 @@ func (rns *RouteNamespace) FILES(url string, path string) {
 		url = "/" + url
 	}
 
-	rns.InfoLogger.Printf(logprefix+"Registering static file path; Path: `%s`; URL: `%s`;", path, url)
+	//rns.InfoLogger.Printf(logprefix+"Registering static file path; Path: `%s`; URL: `%s`;", path, url)
 
 	Settings.staticDir[url] = path
 }
