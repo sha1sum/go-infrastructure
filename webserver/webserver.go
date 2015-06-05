@@ -229,6 +229,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 				fileInfo, err := os.Stat(filePath)
 				if err != nil {
 					//s.WarningLogger.Printf(logprefix+"Static asset not found; Path: %s;", requestPath)
+					s.logger.Context(logger.Fields{"filepath": filePath, "requestPath": requestPath}).Warn("Static file not found")
 					s.onMissingHandler(w, req)
 					return
 				}
@@ -237,6 +238,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 					s.onMissingHandler(w, req)
 				}
 
+				s.logger.Context(logger.Fields{"filepath": filePath, "requestPath": requestPath}).Debug("Serving static file")
 				//s.DebugLogger.Printf(logprefix+"Serving static asset; Path: %s;", requestPath)
 
 				// TODO: Enable gZIP support if allowed for css, js, etc.
