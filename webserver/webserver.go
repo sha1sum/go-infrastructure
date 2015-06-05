@@ -11,10 +11,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aarongreenlee/go-infrastructure/logger"
-	"github.com/aarongreenlee/go-infrastructure/webserver/context"
-	"github.com/aarongreenlee/go-infrastructure/webserver/render"
-	"github.com/julienschmidt/httprouter"
+	"github.com/powerchordinc/pc6/vendor/github.com/aarongreenlee/go-infrastructure/logger"
+	"github.com/powerchordinc/pc6/vendor/github.com/aarongreenlee/go-infrastructure/webserver/context"
+	"github.com/powerchordinc/pc6/vendor/github.com/aarongreenlee/go-infrastructure/webserver/render"
+	"github.com/powerchordinc/pc6/vendor/github.com/julienschmidt/httprouter"
 )
 
 const (
@@ -221,14 +221,16 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	requestPath := req.URL.Path
 
+	s.logger.Context(logger.Fields{"requestPath": requestPath}).Debug("Processing Request")
+
 	if Settings.EnableStaticFileServer {
 		for prefix, staticDir := range Settings.staticDir {
-			//s.DebugLogger.Printf(logprefix+"Evaluating static route; Path: %s:%s;", req.Method, requestPath)
+			s.logger.Context(logger.Fields{"method": req.Method, "requestPath": requestPath}).Debug("Evaluating static route")
+
 			if strings.HasPrefix(requestPath, prefix) {
 				filePath := staticDir + requestPath[len(prefix):]
 				fileInfo, err := os.Stat(filePath)
 				if err != nil {
-					//s.WarningLogger.Printf(logprefix+"Static asset not found; Path: %s;", requestPath)
 					s.logger.Context(logger.Fields{"filepath": filePath, "requestPath": requestPath}).Warn("Static file not found")
 					s.onMissingHandler(w, req)
 					return
@@ -239,7 +241,6 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 				}
 
 				s.logger.Context(logger.Fields{"filepath": filePath, "requestPath": requestPath}).Debug("Serving static file")
-				//s.DebugLogger.Printf(logprefix+"Serving static asset; Path: %s;", requestPath)
 
 				// TODO: Enable gZIP support if allowed for css, js, etc.
 				http.ServeFile(w, req, filePath)
@@ -277,15 +278,14 @@ func (s *Server) onMissingHandler(w http.ResponseWriter, req *http.Request) {
 	context := s.captureRequest(w, req, nil, s.MissingHandler)
 
 	context.Output.Status = http.StatusNotFound
-	//w.WriteHeader(context.Output.Status)
 
-	//s.DebugLogger.Printf(logprefix+"Executing onMissingHandler; Address: %s;", req.URL.Path)
+	s.logger.Context(logger.Fields{"method": req.Method, "requestPath": req.URL.Path, "statusCode": 404}).Debug("Handler not found")
 
 	if seekOnMissingHandler {
 		template := Settings.SystemTemplates["onMissingHandler"]
 		err := context.HTMLTemplate(template, nil)
 		if err != nil {
-			//s.ErrorLogger.Printf(logprefix+"Failed single attempt to load configured onMissingHandler template--serving default response; Path: %s;", template)
+			s.logger.Context(logger.Fields{"template": template}).Warn("Failed single attempt to load configured onMissingHandler template--serving default response")
 			seekOnMissingHandler = false
 		}
 	}
