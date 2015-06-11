@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/powerchordinc/pc6/behavior/localization"
+	"github.com/aarongreenlee/go-infrastructure/localization"
 )
 
 func Example() {

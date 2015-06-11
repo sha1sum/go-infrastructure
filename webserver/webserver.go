@@ -11,10 +11,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/powerchordinc/pc6/vendor/github.com/aarongreenlee/go-infrastructure/logger"
-	"github.com/powerchordinc/pc6/vendor/github.com/aarongreenlee/go-infrastructure/webserver/context"
-	"github.com/powerchordinc/pc6/vendor/github.com/aarongreenlee/go-infrastructure/webserver/render"
-	"github.com/powerchordinc/pc6/vendor/github.com/julienschmidt/httprouter"
+	"github.com/aarongreenlee/go-infrastructure/logger"
+	"github.com/aarongreenlee/go-infrastructure/webserver/context"
+	"github.com/aarongreenlee/go-infrastructure/webserver/render"
+	"github.com/julienschmidt/httprouter"
 )
 
 const (
