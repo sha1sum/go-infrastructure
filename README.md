@@ -1,6 +1,6 @@
-# GO Infrastructure
+# GIA: GO Infrastructure
 
-GO Infrastructure is a collection of packages useful in building platforms. These
+GIA: GO Infrastructure is a collection of packages useful in building platforms. These
 tools are open sourced in the hopes that gophers may find value; however, it is
 not expected that these will become popular frameworks.
 
