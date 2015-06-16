@@ -11,9 +11,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aarongreenlee/go-infrastructure/logger"
-	"github.com/aarongreenlee/go-infrastructure/webserver/context"
-	"github.com/aarongreenlee/go-infrastructure/webserver/render"
+	"github.com/go-gia/go-infrastructure/logger"
+	"github.com/go-gia/go-infrastructure/webserver/context"
+	"github.com/go-gia/go-infrastructure/webserver/render"
 	"github.com/julienschmidt/httprouter"
 )
 

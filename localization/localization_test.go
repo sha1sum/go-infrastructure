@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/aarongreenlee/go-infrastructure/localization"
+	"github.com/go-gia/go-infrastructure/localization"
 )
 
 func Example() {
