@@ -6,8 +6,10 @@ not expected that these will become popular frameworks.
 
 The design goal of these packages is to produce a set of related packages that
 help simplify the development of robust platforms. Many of these ideas come from
-working on platforms for enterprises such as Adobe, TimeWarner Cable, Dolby, PowerChord System, and more.
+working on platforms for enterprises such as [Adobe](http://adobe.com), [TimeWarner Cable](http://www.timewarnercable.com/), [Dolby Labs](http://dolby.com), [PowerChord](http://powerchordsystem.com), and more.
 
-These packages may change often.
+These packages may change often and are currently in robust development.
 
 If you find these packages helpful share the love and let us know.
+
+Send [Aaron Greenlee](http://twitter.com/aarongreenlee) a note if you would like to get invovled or open up a ticket within this repo.
