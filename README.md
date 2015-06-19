@@ -6,7 +6,11 @@ not expected that these will become popular frameworks.
 
 The design goal of these packages is to produce a set of related packages that
 help simplify the development of robust platforms. Many of these ideas come from
-working on platforms for enterprises such as [Adobe](http://adobe.com), [TimeWarner Cable](http://www.timewarnercable.com/), [Dolby Labs](http://dolby.com), [PowerChord](http://powerchordsystem.com), and more.
+building, supporting, advising, and observing platforms for enterprises such
+as [Adobe](http://adobe.com), [TimeWarner Cable](http://www.timewarnercable.com/),
+[Dolby Labs](http://dolby.com), [Guardly](http://guardly.io/),
+[InVision](http://invisionapp.com),
+[PowerChord](http://powerchordsystem.com), and more.
 
 These packages may change often and are currently in robust development.
 
