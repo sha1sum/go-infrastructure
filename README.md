@@ -16,4 +16,4 @@ These packages may change often and are currently in robust development.
 
 If you find these packages helpful share the love and let us know.
 
-Send [Aaron Greenlee](http://twitter.com/aarongreenlee) a note if you would like to get invovled or open up a ticket within this repo.
+Send [Aaron Greenlee](http://twitter.com/aarongreenlee) a note if you would like to get involved or open up a ticket within this repo.
