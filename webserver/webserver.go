@@ -188,9 +188,10 @@ func (s *Server) RegisterHandlerDef(h HandlerDef) {
 		fallthrough
 	case "DELETE":
 		fallthrough
+	case "OPTIONS":
+		fallthrough
 	case "POST":
 		s.Handle(h.Method, h.Path, chain)
-
 	case "":
 		// do nothing--middleware only
 	default:
@@ -221,7 +222,10 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	requestPath := req.URL.Path
 
-	s.logger.Context(logger.Fields{"requestPath": requestPath}).Debug("Processing Request")
+	s.logger.Context(logger.Fields{
+		"requestPath": requestPath,
+		"method":      req.Method,
+	}).Debug("GO-GIA Webserver is receiving a request")
 
 	if Settings.EnableStaticFileServer {
 		for prefix, staticDir := range Settings.staticDir {
