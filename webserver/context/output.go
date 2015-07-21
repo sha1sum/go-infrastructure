@@ -59,19 +59,18 @@ func (output *Output) JSONBody(content []byte) {
 // JSON is a conveinence method for writing JSON to the response body and is
 // designed to be useful when the application would like to deleate marshalling
 // to the Webserver.
-func (output *Output) JSON(data interface{}, marshall bool, indent bool) error {
+func (output *Output) JSON(data interface{}, indent bool) error {
 	output.Header("Content-Type", "application/json;charset=UTF-8")
 
 	var content []byte
 	var err error
 
-	if marshall {
-		if indent {
-			content, err = json.MarshalIndent(data, "", "  ")
-		} else {
-			content, err = json.Marshal(data)
-		}
+	if indent {
+		content, err = json.MarshalIndent(data, "", "  ")
+	} else {
+		content, err = json.Marshal(data)
 	}
+
 	if err != nil {
 		panic(err)
 	}
