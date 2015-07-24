@@ -1,18 +1,11 @@
 package main
 
 import (
-	"log"
-	"os"
+	"fmt"
 
+	"github.com/go-gia/go-infrastructure/logger"
 	"github.com/go-gia/go-infrastructure/webserver"
 	"github.com/go-gia/go-infrastructure/webserver/context"
-)
-
-var (
-	debug = log.New(os.Stdout, "Debug ", log.Ldate|log.Ltime)
-	info  = log.New(os.Stdout, "Info ", log.Ldate|log.Ltime)
-	warn  = log.New(os.Stdout, "Warn ", log.Ldate|log.Ltime)
-	fail  = log.New(os.Stderr, "Fail ", log.Ldate|log.Ltime)
 )
 
 // AppWebInterface represents a application specific structure. You may want to add
@@ -20,7 +13,7 @@ var (
 // handler.
 type AppWebInterface struct {
 	Endpoints []webserver.HandlerDef
-	logger    *log.Logger
+	logger    logger.Logger
 }
 
 // *****************************************************************************
@@ -30,7 +23,7 @@ type AppWebInterface struct {
 // We'll demo the webserver using an API for kicks and grins.
 var api = &AppWebInterface{
 	Endpoints: []webserver.HandlerDef{},
-	logger:    debug,
+	logger:    logger.New(false, true),
 }
 
 func init() {
@@ -63,30 +56,29 @@ type ComplexSampleParams struct {
 
 // ComplexSample is a handler with metadat declared
 func (h AppWebInterface) ComplexSample(ctx *context.Context) {
-	h.logger.Printf("Primary handler is executing")
+	h.logger.Debug("Primary handler is executing")
 	ctx.HTML("Everything is awesome when you are part of a team.")
 }
 
 // RequireSession will be registered to execute before our
 // primary handler.
 func RequireSession(ctx *context.Context) {
-	debug.Printf("Pretend we're validating a session")
+	fmt.Printf("Pretend we're validating a session")
 }
 
 // ThrottleCheck will be registered to execute before our
 // primary handler.
 func ThrottleCheck(ctx *context.Context) {
-	debug.Printf("Pretend we're checking for rate limits")
+	fmt.Printf("Pretend we're checking for rate limits")
 }
 
 // ComplexSamplePostHandler will be registered to execute after our
 // primary handler. This could be some form of analysis or something else.
 func ComplexSamplePostHandler(ctx *context.Context) {
-	debug.Printf("PostHandler is executing")
+	fmt.Printf("PostHandler is executing")
 }
 
 func init() {
-
 	// AuthHandlerDef could be used by many handlers
 	AuthHandlerDef := webserver.HandlerDef{
 		Alias:         "AuthCheck",
@@ -120,7 +112,8 @@ func init() {
 // *****************************************************************************
 
 func main() {
-	ws := webserver.New(debug, info, warn, fail)
+	log := logger.New(false, true)
+	ws := webserver.New(log)
 
 	// You can serve static files. It is quite easy.
 	ws.FILES("/public", "static")

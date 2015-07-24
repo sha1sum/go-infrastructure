@@ -152,7 +152,8 @@ func New(
 		logger: logger}
 
 	s.router = httprouter.New()
-	s.router.NotFound = s.onMissingHandler
+	// TODO We need to reset a default missing handler
+	// s.router.NotFound = s.onMissingHandler
 
 	return s
 }
