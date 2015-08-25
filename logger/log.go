@@ -31,10 +31,21 @@ var _ ContextualLogger = &Context{}
 // Debug and Info level logging can be disabled.
 // Log levels Warn, Error, and Fatal are always logged.
 // If debug, all calls will also log caller informaton.
-func New(debug bool, info bool) *Log {
+//
+// The default format of logs will be JSON. Also supports 'text' which is
+// a easier format for people to understand if you are logging to stdout.
+func New(debug bool, info bool, format string) *Log {
 	text := logrus.New()
 	text.Level = logrus.DebugLevel
-	text.Formatter = &logrus.TextFormatter{ForceColors: true}
+
+	switch format {
+	case "text":
+		text.Formatter = &logrus.TextFormatter{ForceColors: true}
+	case "json":
+		fallthrough
+	default:
+		text.Formatter = &logrus.JSONFormatter{}
+	}
 
 	return &Log{
 		text,
