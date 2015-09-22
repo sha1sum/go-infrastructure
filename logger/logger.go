@@ -16,6 +16,7 @@ type Logger interface {
 	Fatal(args ...interface{})
 	Fatalf(format string, args ...interface{})
 	Context(fields Fields) ContextualLogger
+	Flush()
 }
 
 // ContextualLogger provides the same logging methods as Logger but adds

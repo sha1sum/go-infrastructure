@@ -1,23 +1,60 @@
 package logger
 
 import (
+	"errors"
+	"os"
 	"runtime"
 	"strconv"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/sebest/logrusly"
 )
+
+// Settings is container for an interface that is represented by the various
+// types below.
+type Settings struct {
+	Output interface{}
+	Debug  bool
+	Info   bool
+}
+
+// LogglySettings is a type of output using the Loggly service.
+type LogglySettings struct {
+	Level  string
+	Token  string
+	Domain string
+	Tags   []string
+}
+
+// Stderr is a type of output that uses the os.Stderr
+type Stderr struct {
+	Level  string
+	Format string
+}
+
+// Stdout is a type of output that uses the os.Stdout
+type Stdout struct {
+	Level  string
+	Format string
+}
+
+// Disk is a type of output that uses the logrus output which writes to disk.
+type Disk struct {
+	Path   string
+	Level  string
+	Format string
+}
 
 // Log provides capabilities to log messages both as color formatted message
 // to stdout for developers and as JSON formatted messages sent to Logstash.
 type Log struct {
 	text *logrus.Logger
+	hook *logrusly.LogglyHook
 
-	// behavior flags
-	debug bool
-	info  bool
+	isLoggly bool
+	debug    bool
+	info     bool
 }
-
-//var _ Logger = &Log{}
 
 // Context wraps the standard Logger methods with additional context.
 type Context struct {
@@ -25,33 +62,149 @@ type Context struct {
 	logger *Log
 }
 
-var _ ContextualLogger = &Context{}
+var (
+	// ErrLogLogglySetup is a error that informs that we're missing a token.
+	ErrLogLogglySetup = errors.New("Please make sure your loggly token / domain is setup properly")
+	// ErrLogInvalidLevel is an error that is thrown when an invalid string is
+	// passed as a level.
+	ErrLogInvalidLevel = errors.New("Please make sure you use a valid level: panic, fatal, error, warn, info, debug")
+	// ErrLogInvalidPath is an error that is thrown when an invalid path is passed
+	// into Disk
+	ErrLogInvalidPath = errors.New("Invalid path or permission error.")
+	// ErrLogInvalidType is an error that is thrown when settings.Output.(type)
+	// doesn't match what we're expecting.
+	ErrLogInvalidType = errors.New("Invalid log output type.")
+)
 
-// New creates a Logger and accepts a flag for each log level
-// Debug and Info level logging can be disabled.
+// New creates a Logger
 // Log levels Warn, Error, and Fatal are always logged.
 // If debug, all calls will also log caller informaton.
 //
 // The default format of logs will be JSON. Also supports 'text' which is
 // a easier format for people to understand if you are logging to stdout.
-func New(debug bool, info bool, format string) *Log {
+func New(settings Settings) (*Log, error) {
+	// Setting up Log.
+	log := &Log{}
+
+	// Let's fire up a new logrus
 	text := logrus.New()
 	text.Level = logrus.DebugLevel
 
-	switch format {
-	case "text":
-		text.Formatter = &logrus.TextFormatter{ForceColors: true}
-	case "json":
-		fallthrough
-	default:
+	// Default is text, color me pretty if possible.
+	text.Formatter = &logrus.TextFormatter{ForceColors: true}
+
+	var level logrus.Level
+	var err error
+	var overrideDefaultLevel bool
+
+	switch v := settings.Output.(type) {
+	case LogglySettings:
+		// Validate that the bare minimum of what is needed is present.
+		if v.Token == "" && v.Domain == "" {
+			return &Log{}, ErrLogLogglySetup
+		}
+
+		if v.Level != "" && v.Level != "debug" {
+			level, err = logrus.ParseLevel(v.Level)
+			if err != nil {
+				return log, ErrLogInvalidLevel
+			}
+			overrideDefaultLevel = true
+		}
+
+		var token, domain string
+		// Change the formatter to JSON, required here.
 		text.Formatter = &logrus.JSONFormatter{}
+		// initialize LogglyHook
+		token = v.Token
+		domain = v.Domain
+		// Create new hook
+		hook := logrusly.NewLogglyHook(token, domain, level)
+		// Add hook tags
+		for _, tag := range v.Tags {
+			hook.Tag(tag)
+		}
+		// Finally, add the hook to the logrus
+		text.Hooks.Add(hook)
+		// Let's add information to the main log.
+		log.hook = hook
+		log.isLoggly = true
+	case Stderr:
+		text.Out = os.Stderr
+
+		if v.Format == "json" {
+			text.Formatter = &logrus.JSONFormatter{}
+		}
+
+		if v.Level != "" && v.Level != "debug" {
+			level, err = logrus.ParseLevel(v.Level)
+			if err != nil {
+				return log, ErrLogInvalidLevel
+			}
+			overrideDefaultLevel = true
+		}
+	case Stdout:
+		text.Out = os.Stdout
+
+		if v.Format == "json" {
+			text.Formatter = &logrus.JSONFormatter{}
+		}
+
+		if v.Level != "" && v.Level != "debug" {
+			level, err = logrus.ParseLevel(v.Level)
+			if err != nil {
+				return log, ErrLogInvalidLevel
+			}
+			overrideDefaultLevel = true
+		}
+	case Disk:
+		if v.Path == "" {
+			return log, ErrLogInvalidPath
+		}
+
+		f, err := os.OpenFile(v.Path, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+		if err != nil {
+			return log, ErrLogInvalidPath
+		}
+
+		text.Out = f
+
+		if v.Format == "json" {
+			text.Formatter = &logrus.JSONFormatter{}
+		}
+
+		if v.Level != "" && v.Level != "debug" {
+			level, err = logrus.ParseLevel(v.Level)
+			if err != nil {
+				return log, err
+			}
+			overrideDefaultLevel = true
+		}
+	default:
+		// We should assume text unless overriden otherwise.
+		return log, ErrLogInvalidType
 	}
 
-	return &Log{
-		text,
-		debug,
-		info,
+	// All the error checking for level has been handled up above.
+	if overrideDefaultLevel {
+		text.Level = level
 	}
+
+	// Log debug / info evaluation
+	if text.Level == logrus.DebugLevel {
+		log.debug = true
+		log.info = true
+	}
+
+	if text.Level == logrus.InfoLevel {
+		log.debug = false
+		log.info = true
+	}
+
+	// Let's attach text to the log.
+	log.text = text
+
+	return log, nil
 }
 
 // Debug logs a message at the Debug level
@@ -146,6 +299,15 @@ func (l *Log) Fatal(args ...interface{}) {
 	}
 
 	l.text.Fatalln(args...)
+}
+
+// Flush is a pass-through function that is exposed on logrusly package.
+func (l *Log) Flush() {
+	if l.isLoggly {
+		// If this is loggly, we're passing flush to the client otherwise we lose
+		// 5 seconds worth of data (for not panic/fatal messages) and that's not cool.
+		l.hook.Flush()
+	}
 }
 
 // Fatalf logs a printf formatted message at the Fatal level
