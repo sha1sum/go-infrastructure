@@ -107,7 +107,7 @@ func New(settings Settings) (*Log, error) {
 			return &Log{}, ErrLogLogglySetup
 		}
 
-		if v.Level != "" && v.Level != "debug" {
+		if v.Level != "" {
 			level, err = logrus.ParseLevel(v.Level)
 			if err != nil {
 				return log, ErrLogInvalidLevel
@@ -139,7 +139,7 @@ func New(settings Settings) (*Log, error) {
 			text.Formatter = &logrus.JSONFormatter{}
 		}
 
-		if v.Level != "" && v.Level != "debug" {
+		if v.Level != "" {
 			level, err = logrus.ParseLevel(v.Level)
 			if err != nil {
 				return log, ErrLogInvalidLevel
@@ -153,7 +153,7 @@ func New(settings Settings) (*Log, error) {
 			text.Formatter = &logrus.JSONFormatter{}
 		}
 
-		if v.Level != "" && v.Level != "debug" {
+		if v.Level != "" {
 			level, err = logrus.ParseLevel(v.Level)
 			if err != nil {
 				return log, ErrLogInvalidLevel
@@ -173,7 +173,7 @@ func New(settings Settings) (*Log, error) {
 		text.Out = f
 		text.Formatter = &logrus.JSONFormatter{}
 
-		if v.Level != "" && v.Level != "debug" {
+		if v.Level != "" {
 			level, err = logrus.ParseLevel(v.Level)
 			if err != nil {
 				return log, err
