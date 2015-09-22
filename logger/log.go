@@ -2,6 +2,7 @@ package logger
 
 import (
 	"errors"
+	"io/ioutil"
 	"os"
 	"runtime"
 	"strconv"
@@ -43,6 +44,9 @@ type Disk struct {
 	Path  string
 	Level string
 }
+
+// Stdiscard is a type of output that discards everything.
+type Stdiscard struct{}
 
 // Log provides capabilities to log messages both as color formatted message
 // to stdout for developers and as JSON formatted messages sent to Logstash.
@@ -176,6 +180,8 @@ func New(settings Settings) (*Log, error) {
 			}
 			overrideDefaultLevel = true
 		}
+	case Stdiscard:
+		text.Out = ioutil.Discard
 	default:
 		// We should assume text unless overriden otherwise.
 		return log, ErrLogInvalidType
