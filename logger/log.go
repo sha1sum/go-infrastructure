@@ -40,9 +40,8 @@ type Stdout struct {
 
 // Disk is a type of output that uses the logrus output which writes to disk.
 type Disk struct {
-	Path   string
-	Level  string
-	Format string
+	Path  string
+	Level string
 }
 
 // Log provides capabilities to log messages both as color formatted message
@@ -168,10 +167,7 @@ func New(settings Settings) (*Log, error) {
 		}
 
 		text.Out = f
-
-		if v.Format == "json" {
-			text.Formatter = &logrus.JSONFormatter{}
-		}
+		text.Formatter = &logrus.JSONFormatter{}
 
 		if v.Level != "" && v.Level != "debug" {
 			level, err = logrus.ParseLevel(v.Level)
