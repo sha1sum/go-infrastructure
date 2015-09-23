@@ -158,6 +158,25 @@ func New(
 	return s
 }
 
+// RegisterHandlerDefsWithOptions accepts a slice of HandlerDefs and registers
+// each unique route and then after all the routes have been determined, creates
+// a new handler def with the OPTIONS method.
+func (s *Server) RegisterHandlerDefsWithOptions(h []HandlerDef) {
+	optionsMap := map[string][]string{}
+	// Let's loop through all the HandlerDefs and get collect methods / paths
+	for _, hd := range h {
+		optionsMap[hd.Path] = append(optionsMap[hd.Path], hd.Method)
+	}
+	// Now let's add to the end of the incoming HandlerDefs
+	for route, value := range optionsMap {
+		h = append(h, createOption(route, value))
+	}
+	// Now, let's register everything.
+	for _, hd := range h {
+		s.RegisterHandlerDef(hd)
+	}
+}
+
 // RegisterHandlerDefs accepts a slice of HandlerDefs and registers each
 func (s *Server) RegisterHandlerDefs(h []HandlerDef) {
 	for _, hd := range h {
@@ -297,5 +316,17 @@ func (s *Server) onMissingHandler(w http.ResponseWriter, req *http.Request) {
 
 	if !seekOnMissingHandler {
 		context.Output.Body([]byte(defaultResponse404))
+	}
+}
+
+func createOption(path string, methods []string) HandlerDef {
+	return HandlerDef{
+		Alias:  path + "OptionsCheck",
+		Method: "OPTIONS",
+		Path:   path,
+		Handler: func(c *context.Context) {
+			c.Output.Header("Allowed", strings.Join(methods, ","))
+			c.Output.Body([]byte{})
+		},
 	}
 }
