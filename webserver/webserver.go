@@ -182,12 +182,10 @@ func New(
 // each unique route and then after all the routes have been determined, creates
 // new HandlerDefs with the OPTIONS method for each unique route.
 func (s *Server) RegisterHandlerDefsAndOptions(h []HandlerDef) error {
-	var optionsMapMutex = &sync.Mutex{}
 	optionsMap := map[string]optionsMetadata{}
 	defaultHeaders := make(map[string]map[string]string)
 	// Let's loop through all the HandlerDefs and get collect methods / paths
 	for _, hd := range h {
-		optionsMapMutex.Lock()
 		if _, pathExists := optionsMap[hd.Path]; !pathExists {
 			optionsMap[hd.Path] = optionsMetadata{}
 			defaultHeaders[hd.Path] = hd.RequestHeaders
@@ -195,21 +193,12 @@ func (s *Server) RegisterHandlerDefsAndOptions(h []HandlerDef) error {
 
 		// Open up the current route
 		o := optionsMap[hd.Path]
-		if strings.ToUpper(hd.Method) == "GET" {
-			o.Get = true
-		}
-		if strings.ToUpper(hd.Method) == "POST" {
-			o.Post = true
-		}
-		if strings.ToUpper(hd.Method) == "PUT" {
-			o.Put = true
-		}
-		if strings.ToUpper(hd.Method) == "DELETE" {
-			o.Delete = true
-		}
-		if strings.ToUpper(hd.Method) == "HEAD" {
-			o.Head = true
-		}
+		// Evaluating the
+		o.Get = strings.ToUpper(hd.Method) == "GET"
+		o.Post = strings.ToUpper(hd.Method) == "POST"
+		o.Put = strings.ToUpper(hd.Method) == "PUT"
+		o.Delete = strings.ToUpper(hd.Method) == "DELETE"
+		o.Head = strings.ToUpper(hd.Method) == "HEAD"
 
 		if len(hd.RequestHeaders) != len(defaultHeaders[hd.Path]) {
 			return ErrWebserverRequestHeaderCountWrong
@@ -228,7 +217,6 @@ func (s *Server) RegisterHandlerDefsAndOptions(h []HandlerDef) error {
 		}
 
 		optionsMap[hd.Path] = o
-		optionsMapMutex.Unlock()
 	}
 
 	// // Now let's add to the end of the incoming HandlerDefs
@@ -408,7 +396,6 @@ func createOption(path string, meta optionsMetadata) HandlerDef {
 	}
 
 	return HandlerDef{
-		Alias:  "OptionForPath[" + path + "]",
 		Method: "OPTIONS",
 		Path:   path,
 		Handler: func(c *context.Context) {
