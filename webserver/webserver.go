@@ -5,7 +5,6 @@
 package webserver
 
 import (
-	"errors"
 	"net/http"
 	"os"
 	"strings"
@@ -111,26 +110,14 @@ type (
 		Params interface{}
 		// An optional reference to a structure containing output for successful HandlerFunc calls.
 		Response interface{}
-		// An optional reference to a map describing response headers expected from the HandlerFunc.
-		ReponseHeaders map[string]string
-		// An optional reference to a map describing required request headers of the HandlerFunc.
-		RequestHeaders map[string]string
+		// An optional reference to a map describing extra headers for the HandlerFunc (input or output)
+		Headers map[string]string
 		// The handler to register
 		Handler HandlerFunc
 		// A chain of handlers to process before executing the primary HandlerFunc
 		PreHandlers []HandlerDef
 		// A chain of handlers to process after executing the primary HandlerFunc
 		PostHandlers []HandlerDef
-	}
-
-	// optionsMetadata is blha blah blah
-	optionsMetadata struct {
-		Get            bool
-		Put            bool
-		Post           bool
-		Delete         bool
-		Head           bool
-		RequestHeaders map[string]string
 	}
 )
 
@@ -148,13 +135,6 @@ var (
 	}
 	// If we fail to find a configured onMissingHandler once we will stop looking
 	seekOnMissingHandler = true
-
-	// ErrWebserverDuplicateMethod is thrown when there's a route that has duplicate methods (read: Two PUT requests on the same route)
-	ErrWebserverDuplicateMethod = errors.New("Duplicate Method on a route.")
-	// ErrWebserverRequestHeaderCountWrong is thrown when the request header counts are wrong between similar routes.
-	ErrWebserverRequestHeaderCountWrong = errors.New("The current route doesn't have the same number of RequestHeaders as a previous route header.")
-	// ErrWebserverRequestHeaderMismatch is thrown when the request header of a route doesn't match a request header of another route.
-	ErrWebserverRequestHeaderMismatch = errors.New("The routes have RequestHeaders mismatch. For similiar routes, all the verbs should use the same RequestHeaders.")
 )
 
 // New returns a new WebServer.
@@ -178,78 +158,11 @@ func New(
 	return s
 }
 
-// RegisterHandlerDefsAndOptions accepts a slice of HandlerDefs and registers
-// each unique route and then after all the routes have been determined, creates
-// new HandlerDefs with the OPTIONS method for each unique route.
-func (s *Server) RegisterHandlerDefsAndOptions(h []HandlerDef) error {
-	var optionsMapMutex = &sync.Mutex{}
-	optionsMap := map[string]optionsMetadata{}
-	defaultHeaders := make(map[string]map[string]string)
-	// Let's loop through all the HandlerDefs and get collect methods / paths
-	for _, hd := range h {
-		optionsMapMutex.Lock()
-		if _, pathExists := optionsMap[hd.Path]; !pathExists {
-			optionsMap[hd.Path] = optionsMetadata{}
-			defaultHeaders[hd.Path] = hd.RequestHeaders
-		}
-
-		// Open up the current route
-		o := optionsMap[hd.Path]
-		if strings.ToUpper(hd.Method) == "GET" {
-			o.Get = true
-		}
-		if strings.ToUpper(hd.Method) == "POST" {
-			o.Post = true
-		}
-		if strings.ToUpper(hd.Method) == "PUT" {
-			o.Put = true
-		}
-		if strings.ToUpper(hd.Method) == "DELETE" {
-			o.Delete = true
-		}
-		if strings.ToUpper(hd.Method) == "HEAD" {
-			o.Head = true
-		}
-
-		if len(hd.RequestHeaders) != len(defaultHeaders[hd.Path]) {
-			return ErrWebserverRequestHeaderCountWrong
-		}
-
-		if len(hd.RequestHeaders) > 0 {
-			for key, value := range defaultHeaders[hd.Path] {
-				if _, ok := hd.RequestHeaders[key]; ok {
-					if hd.RequestHeaders[key] != value {
-						return ErrWebserverRequestHeaderMismatch
-					}
-				}
-			}
-
-			o.RequestHeaders = hd.RequestHeaders
-		}
-
-		optionsMap[hd.Path] = o
-		optionsMapMutex.Unlock()
-	}
-
-	// // Now let's add to the end of the incoming HandlerDefs
-	for route, meta := range optionsMap {
-		h = append(h, createOption(route, meta))
-	}
-	// // Now, let's register everything.
-	for _, hd := range h {
-		s.RegisterHandlerDef(hd)
-	}
-
-	return nil
-}
-
 // RegisterHandlerDefs accepts a slice of HandlerDefs and registers each
-func (s *Server) RegisterHandlerDefs(h []HandlerDef) error {
+func (s *Server) RegisterHandlerDefs(h []HandlerDef) {
 	for _, hd := range h {
 		s.RegisterHandlerDef(hd)
 	}
-
-	return nil
 }
 
 // RegisterHandlerDef accepts a HandlerDef and registers it's behavior with the
@@ -270,8 +183,6 @@ func (s *Server) RegisterHandlerDef(h HandlerDef) {
 
 	// Register
 	switch h.Method {
-	case "HEAD":
-		fallthrough
 	case "GET":
 		fallthrough
 	case "PUT":
@@ -386,37 +297,5 @@ func (s *Server) onMissingHandler(w http.ResponseWriter, req *http.Request) {
 
 	if !seekOnMissingHandler {
 		context.Output.Body([]byte(defaultResponse404))
-	}
-}
-
-func createOption(path string, meta optionsMetadata) HandlerDef {
-	methods := []string{}
-	if meta.Get {
-		methods = append(methods, "GET")
-	}
-	if meta.Put {
-		methods = append(methods, "PUT")
-	}
-	if meta.Post {
-		methods = append(methods, "POST")
-	}
-	if meta.Delete {
-		methods = append(methods, "DELETE")
-	}
-	if meta.Head {
-		methods = append(methods, "HEAD")
-	}
-
-	return HandlerDef{
-		Alias:  "OptionForPath[" + path + "]",
-		Method: "OPTIONS",
-		Path:   path,
-		Handler: func(c *context.Context) {
-			c.Output.Header("Allowed", strings.Join(methods, ","))
-			for header, value := range meta.RequestHeaders {
-				c.Output.Header(header, value)
-			}
-			c.Output.Body([]byte{})
-		},
 	}
 }
