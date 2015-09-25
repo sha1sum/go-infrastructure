@@ -1,23 +1,58 @@
 package logger
 
 // NewLogMock returns a new mock logger
-func NewLogMock(debug, info bool) *MockLog {
-	text := new(Logger)
+func NewLogMock(settings Settings) (*MockLog, error) {
+	mockLog := &MockLog{}
 
-	return &MockLog{
-		text:  text,
-		debug: debug,
-		info:  info,
+	var level string
+
+	switch v := settings.Output.(type) {
+	case LogglySettings:
+		if level != "" {
+			level = v.Level
+		}
+	case Stderr:
+		if level != "" {
+			level = v.Level
+		}
+	case Stdout:
+		if level != "" {
+			level = v.Level
+		}
+	case Disk:
+		if level != "" {
+			level = v.Level
+		}
+	default:
+		return mockLog, ErrLogInvalidType
 	}
+
+	if level == "debug" {
+		mockLog.debug = true
+		mockLog.info = true
+	}
+	if level == "info" {
+		mockLog.debug = false
+		mockLog.info = true
+	}
+
+	mockLog.text = new(Logger)
+
+	return mockLog, nil
 }
 
 // MockLog mock object
 type MockLog struct {
 	text *Logger
+
 	// behavior flags
-	debug bool
-	info  bool
+	isLoggly bool
+	debug    bool
+	info     bool
 }
+
+// Flush inside mock logger
+func (l *MockLog) Flush() {}
 
 // Debug inside mock logger
 func (l *MockLog) Debug(args ...interface{}) {}
