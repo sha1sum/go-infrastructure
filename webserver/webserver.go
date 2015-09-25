@@ -112,7 +112,7 @@ type (
 		// An optional reference to a structure containing output for successful HandlerFunc calls.
 		Response interface{}
 		// An optional reference to a map describing response headers expected from the HandlerFunc.
-		ReponseHeaders map[string]string
+		ResponseHeaders map[string]string
 		// An optional reference to a map describing required request headers of the HandlerFunc.
 		RequestHeaders map[string]string
 		// The handler to register
