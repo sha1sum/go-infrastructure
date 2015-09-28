@@ -25,6 +25,7 @@ type Context struct {
 	Request        *http.Request
 	ResponseWriter http.ResponseWriter
 	Params         httprouter.Params
+	Dictionary
 }
 
 // New produces a new request context event.
@@ -36,6 +37,7 @@ func New(w http.ResponseWriter, req *http.Request, params httprouter.Params) *Co
 	c.Request = req
 	c.ResponseWriter = w
 	c.Params = params
+	c.Dictionary = *NewDictionary()
 
 	if c.Input.Is("POST") || c.Input.Is("PUT") {
 		c.Input.Body()
