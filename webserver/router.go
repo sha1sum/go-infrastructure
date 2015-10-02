@@ -42,9 +42,9 @@ func (rns *RouteNamespace) Handle(method string, path string, handlers []Handler
 		event := rns.server.captureRequest(w, req, params, handlers)
 
 		for _, h := range handlers {
-			// TODO - Look into the context to see if we have already written headers
-			// or something that would preclude us from executing the other handlers
-			// in the chain
+			if event.BreakHandlerChain {
+				break
+			}
 			h(event)
 		}
 	})

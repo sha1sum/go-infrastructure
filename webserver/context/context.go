@@ -17,6 +17,10 @@ type Context struct {
 	RequestContentLength int
 	// ResponseContentLength contains a count of outgoing bytes.
 	ResponseContentLength int
+	// BreakHandlerChain, if set to true, will skip the execution of
+	// PreHandlers, Target Handler, or Post Handlers. For example, if this flag
+	// is set during a prehandler the remaining handlers will not be processed.
+	BreakHandlerChain bool
 
 	renderer render.Renderer
 
@@ -25,6 +29,7 @@ type Context struct {
 	Request        *http.Request
 	ResponseWriter http.ResponseWriter
 	Params         httprouter.Params
+
 	Dictionary
 }
 
