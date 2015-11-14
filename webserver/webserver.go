@@ -408,7 +408,7 @@ func createOption(path string, meta optionsMetadata) HandlerDef {
 		Method: "OPTIONS",
 		Path:   path,
 		Handler: func(c *context.Context) {
-			c.Output.Header("Allowed", strings.Join(methods, ","))
+			c.Output.Header("Access-Control-Allow-Methods", strings.Join(methods, ","))
 			for header, value := range meta.RequestHeaders {
 				c.Output.Header(header, value)
 			}
