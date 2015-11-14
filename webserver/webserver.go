@@ -134,6 +134,15 @@ type (
 	}
 )
 
+// SetHandlerFunc returns a copy of the provided HandlerDef, with the provided
+// HandlerFunc set and is helpful when the HandlerFun would like to reference
+// it's HandlerDef. Without setting the HandlerFunc into a copy applications
+// are unable to compile due to a initialization loop.
+func SetHandlerFunc(def HandlerDef, f HandlerFunc) HandlerDef {
+	def.Handler = f
+	return def
+}
+
 var (
 	// Settings allows a developer to override the conventional settings of the
 	// webserver.
