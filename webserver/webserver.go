@@ -19,46 +19,22 @@ import (
 )
 
 const (
-	// MIMEJSON represents the standard classification for data encoded as JSON.
-	MIMEJSON = "application/json"
-	// MIMEHTML represents the standard classification for HTML web pages.
-	MIMEHTML = "text/html"
-	// MIMEXML represents the standard classification for data encoded as XML.
-	MIMEXML = "application/xml"
-	// MIMEXMLTEXT represents the standard classification for a XML text document.
-	MIMEXMLTEXT = "text/xml"
-	// MIMEPLAIN represents the standard classification for plain text data without
-	// any encoded format and is generally human readable text data.
-	MIMEPLAIN = "text/plain"
-	// MIMEFORM represents form data encoded by a Web browser posted to a server.
-	MIMEFORM = "application/x-www-form-urlencoded"
-	// MIMECSS represents the standard classificaton for Cascading Style Sheets.
-	MIMECSS = "text/css"
-	// MIMEJS represents the standard classification for JavaScript.
-	MIMEJS = "application/javascript"
-	// MIMEPNG represents the standard classificaton for PNG images.
-	MIMEPNG = "image/png"
-	// MIMEJPEG represents the standard classificaton for JPEG/JPG images.
-	MIMEJPEG = "image/jpeg"
-	// MIMEGIF represents the standard classificaton for GIF images.
-	MIMEGIF = "image/gif"
-	// MIMEXICON represents the proposed classification for icons such as favicon images
-	MIMEXICON = "image/x-icon"
+	GET     = "GET"
+	POST    = "POST"
+	OPTIONS = "OPTIONS"
 )
 
-const (
-	// defaultResponse404 is returned if the server is unable to render the response
-	// using the configured SystemTemplate. This can happen if a template file does not
-	// exist at the configured path.
-	defaultResponse404 = `<html><head><title>404 Not Found</title><style>body{background-color:black;color:white;margin:20%;}</style></head><body><center><h1>404 Not Found</h1></center></body></html>`
-)
+// defaultResponse404 is returned if the server is unable to render the response
+// using the configured SystemTemplate. This can happen if a template file does not
+// exist at the configured path.
+const defaultResponse404 = `<html><head><title>404 Not Found</title><style>body{background-color:black;color:white;margin:20%;}</style></head><body><center><h1>404 Not Found</h1></center></body></html>`
 
 type (
 	// Server represents an instance of the webserver.
 	Server struct {
-		*RouteNamespace
-		contextPool    sync.Pool          // Manage our RequestContext event pool
-		router         *httprouter.Router // Delegate to the httprouter package for performant route matching
+		contextPool   sync.Pool
+		methodRouters map[string]*httprouter.Router
+
 		MissingHandler []HandlerFunc
 
 		// HandlerDef maintains a map of all registered handler definitions
@@ -74,7 +50,7 @@ type (
 		Render *render.Conventions
 		// EnableStaticFileServer if true, enables the serving of static assets such as CSS, JS, or other files.
 		EnableStaticFileServer bool
-		// StaticFilePath defines the releative root directory static files can be served from. Example "public" or "web-src/cdn/"
+		// StaticFilePath defines the relative root directory static files can be served from. Example "public" or "web-src/cdn/"
 		StaticFilePath string
 		// SystemTemplates is a map of keys to template paths. Default templates
 		// such as `onMissingHandler` (404) are configurable here allowing developers
@@ -82,66 +58,13 @@ type (
 		SystemTemplates map[string]string
 		// A map of directory paths the webserver should serve static files from
 		staticDir map[string]string
-		// Flag requests that take longer than N miliseconds. Default is 250ms (1/4th a second)
+		// Flag requests that take longer than N milliseconds. Default is 250ms (1/4th a second)
 		RequestDurationWarning time.Duration
 	}
 
 	// HandlerFunc is a request event handler and accepts a RequestContext
 	HandlerFunc func(*context.Context)
-
-	// HandlerDef provides for a system to organize HandlerFunc metadata. Use of a
-	// HandlerDef to describe a HandlerFunc is not required but provides a way
-	// to eaisly configure advanced behavior and document that behavior.
-	//
-	// This abstraction binds documentation to implementation. This tight
-	// coupeling between the two helps reduce documentaton buridens and
-	// ensures documentation is kept current.
-	HandlerDef struct {
-		// A string to name the handler
-		Alias string
-		// The method to interact with the handler (i.e. GET or POST)
-		Method string
-		// The URL Path to access the handler
-		Path string
-		// The location of a HTML file describing the HandlerDef behavior in detail.
-		Documentation string
-		// The maximum time this HandlerFunc should take to process. This information is useful for performance testing.
-		DurationExpectation string
-		// An optional reference to a structure containing input paramaters for the HandlerFunc.
-		Params interface{}
-		// An optional reference to a structure containing output for successful HandlerFunc calls.
-		Response interface{}
-		// An optional reference to a map describing response headers expected from the HandlerFunc.
-		ResponseHeaders map[string]string
-		// An optional reference to a map describing required request headers of the HandlerFunc.
-		RequestHeaders map[string]string
-		// The handler to register
-		Handler HandlerFunc
-		// A chain of handlers to process before executing the primary HandlerFunc
-		PreHandlers []HandlerDef
-		// A chain of handlers to process after executing the primary HandlerFunc
-		PostHandlers []HandlerDef
-	}
-
-	// optionsMetadata is blha blah blah
-	optionsMetadata struct {
-		Get            bool
-		Put            bool
-		Post           bool
-		Delete         bool
-		Head           bool
-		RequestHeaders map[string]string
-	}
 )
-
-// SetHandlerFunc returns a copy of the provided HandlerDef, with the provided
-// HandlerFunc set and is helpful when the HandlerFun would like to reference
-// it's HandlerDef. Without setting the HandlerFunc into a copy applications
-// are unable to compile due to a initialization loop.
-func SetHandlerFunc(def HandlerDef, f HandlerFunc) HandlerDef {
-	def.Handler = f
-	return def
-}
 
 var (
 	// Settings allows a developer to override the conventional settings of the
@@ -171,134 +94,25 @@ func New(
 	logger logger.Logger) *Server {
 
 	s := &Server{
-		logger:     logger,
-		HandlerDef: make(map[string]HandlerDef),
+		logger:        logger,
+		HandlerDef:    make(map[string]HandlerDef),
+		methodRouters: make(map[string]*httprouter.Router),
 	}
-	// Setup an initial route namespace
-	s.RouteNamespace = &RouteNamespace{
-		prefix: "/",
-		server: s,
-		logger: logger}
 
-	s.router = httprouter.New()
+	// Be sure to setup at least one router. Additional method routers
+	// can be defined when HandlerFuncs are registered.
+	s.methodRouters[GET] = httprouter.New()
+
 	// TODO We need to reset a default missing handler
 	// s.router.NotFound = s.onMissingHandler
 
 	return s
 }
 
-// RegisterHandlerDefsAndOptions accepts a slice of HandlerDefs and registers
-// each unique route and then after all the routes have been determined, creates
-// new HandlerDefs with the OPTIONS method for each unique route.
-func (s *Server) RegisterHandlerDefsAndOptions(h []HandlerDef) error {
-	optionsMap := map[string]optionsMetadata{}
-	defaultHeaders := make(map[string]map[string]string)
-	// Let's loop through all the HandlerDefs and get collect methods / paths
-	for _, hd := range h {
-		if _, pathExists := optionsMap[hd.Path]; !pathExists {
-			optionsMap[hd.Path] = optionsMetadata{}
-			defaultHeaders[hd.Path] = hd.RequestHeaders
-		}
-
-		// Open up the current route
-		o := optionsMap[hd.Path]
-		// Evaluating the
-		o.Get = strings.ToUpper(hd.Method) == "GET"
-		o.Post = strings.ToUpper(hd.Method) == "POST"
-		o.Put = strings.ToUpper(hd.Method) == "PUT"
-		o.Delete = strings.ToUpper(hd.Method) == "DELETE"
-		o.Head = strings.ToUpper(hd.Method) == "HEAD"
-
-		if len(hd.RequestHeaders) != len(defaultHeaders[hd.Path]) {
-			return ErrWebserverRequestHeaderCountWrong
-		}
-
-		if len(hd.RequestHeaders) > 0 {
-			for key, value := range defaultHeaders[hd.Path] {
-				if _, ok := hd.RequestHeaders[key]; ok {
-					if hd.RequestHeaders[key] != value {
-						return ErrWebserverRequestHeaderMismatch
-					}
-				}
-			}
-
-			o.RequestHeaders = hd.RequestHeaders
-		}
-
-		optionsMap[hd.Path] = o
-	}
-
-	// // Now let's add to the end of the incoming HandlerDefs
-	for route, meta := range optionsMap {
-		h = append(h, createOption(route, meta))
-	}
-	// // Now, let's register everything.
-	for _, hd := range h {
-		s.RegisterHandlerDef(hd)
-	}
-
-	return nil
-}
-
-// RegisterHandlerDefs accepts a slice of HandlerDefs and registers each
-func (s *Server) RegisterHandlerDefs(h []HandlerDef) error {
-	for _, hd := range h {
-		s.RegisterHandlerDef(hd)
-	}
-
-	return nil
-}
-
-// RegisterHandlerDef accepts a HandlerDef and registers it's behavior with the
-// webserver.
-func (s *Server) RegisterHandlerDef(h HandlerDef) {
-	chain := []HandlerFunc{}
-
-	// Pre
-	for _, a := range h.PreHandlers {
-		chain = append(chain, a.Handler)
-	}
-	// Target
-	chain = append(chain, h.Handler)
-	// Post
-	for _, a := range h.PostHandlers {
-		chain = append(chain, a.Handler)
-	}
-
-	// Register
-	switch h.Method {
-	case "HEAD":
-		fallthrough
-	case "GET":
-		fallthrough
-	case "PUT":
-		fallthrough
-	case "DELETE":
-		fallthrough
-	case "OPTIONS":
-		fallthrough
-	case "POST":
-		s.Handle(h.Method, h.Path, chain)
-	case "":
-		// do nothing--middleware only
-	default:
-		panic("Unable to register handler due to unknown method: " + h.Method)
-	}
-
-	// Register the handler def for auto-documentation
-	s.handlerDefMutex.Lock()
-	defer s.handlerDefMutex.Unlock()
-
-	s.HandlerDef[h.Method+":"+h.Path] = h
-}
-
 // Start launches the webserver so that it begins listening and serving requests
 // on the desired address.
 func (s *Server) Start(address string) {
-	//s.InfoLogger.Printf(logprefix+"Starting webserver; Address: %s;", address)
-
 	if err := http.ListenAndServe(address, s); err != nil {
-		//s.ErrorLogger.Printf(logprefix+"Unable to start; Address: %s; Error: %s", address, err.Error())
 		panic(err)
 	}
 }
@@ -340,7 +154,12 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	s.router.ServeHTTP(w, req)
+	router, ok := s.methodRouters[req.Method]
+	if !ok {
+		router = s.methodRouters[GET]
+	}
+
+	router.ServeHTTP(w, req)
 
 	duration := time.Since(starttick)
 	if duration >= Settings.RequestDurationWarning {
@@ -386,33 +205,52 @@ func (s *Server) onMissingHandler(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func createOption(path string, meta optionsMetadata) HandlerDef {
-	methods := []string{}
-	if meta.Get {
-		methods = append(methods, "GET")
-	}
-	if meta.Put {
-		methods = append(methods, "PUT")
-	}
-	if meta.Post {
-		methods = append(methods, "POST")
-	}
-	if meta.Delete {
-		methods = append(methods, "DELETE")
-	}
-	if meta.Head {
-		methods = append(methods, "HEAD")
+// Handle registers HandlerFuncs with the webserver.
+func (s *Server) Handle(method string, path string, handlers []HandlerFunc) {
+	router, ok := s.methodRouters[method]
+	if !ok {
+		router = httprouter.New()
+		s.methodRouters[method] = router
 	}
 
-	return HandlerDef{
-		Method: "OPTIONS",
-		Path:   path,
-		Handler: func(c *context.Context) {
-			c.Output.Header("Access-Control-Allow-Methods", strings.Join(methods, ","))
-			for header, value := range meta.RequestHeaders {
-				c.Output.Header(header, value)
+	router.Handle(method, path, func(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
+		event := s.captureRequest(w, req, params, handlers)
+
+		for _, h := range handlers {
+			if event.BreakHandlerChain {
+				break
 			}
-			c.Output.Body([]byte{})
-		},
+			h(event)
+		}
+	})
+}
+
+// FILES registers a url and directory path to serve static files. The webserver
+// will serve all static files in any directories under these paths. Executing
+// this method enables the static file server flag.
+func (s *Server) FILES(url string, path string) {
+	if !Settings.EnableStaticFileServer {
+		Settings.EnableStaticFileServer = true
 	}
+
+	if !strings.HasPrefix(url, "/") {
+		url = "/" + url
+	}
+
+	Settings.staticDir[url] = path
+}
+
+// GET is a convenience method for registering handlers
+func (s *Server) GET(path string, handlers ...HandlerFunc) {
+	s.Handle("GET", path, handlers)
+}
+
+// POST is a convenience method for registering handlers
+func (s *Server) POST(path string, handlers ...HandlerFunc) {
+	s.Handle("POST", path, handlers)
+}
+
+// PUT is a convenience method for registering handlers
+func (s *Server) PUT(path string, handlers ...HandlerFunc) {
+	s.Handle("PUT", path, handlers)
 }
