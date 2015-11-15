@@ -28,7 +28,6 @@ type Context struct {
 	Output         *Output
 	Request        *http.Request
 	ResponseWriter http.ResponseWriter
-	Params         httprouter.Params
 
 	Dictionary
 }
@@ -37,11 +36,12 @@ type Context struct {
 func New(w http.ResponseWriter, req *http.Request, params httprouter.Params) *Context {
 	var c = new(Context)
 
-	c.Input = NewInput(req)
+	p := make([]Param, len(params), len(params))
+
+	c.Input = NewInput(req, p)
 	c.Output = NewOutput(c)
 	c.Request = req
 	c.ResponseWriter = w
-	c.Params = params
 	c.Dictionary = *NewDictionary()
 
 	if c.Input.Is("POST") || c.Input.Is("PUT") {
