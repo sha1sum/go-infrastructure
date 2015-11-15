@@ -38,6 +38,10 @@ func New(w http.ResponseWriter, req *http.Request, params httprouter.Params) *Co
 
 	p := make([]Param, len(params), len(params))
 
+	for i, v := range params {
+		p[i] = Param{Key: v.Key, Value: v.Value}
+	}
+
 	c.Input = NewInput(req, p)
 	c.Output = NewOutput(c)
 	c.Request = req
