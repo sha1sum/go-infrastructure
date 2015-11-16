@@ -25,10 +25,14 @@ const (
 	POST = "POST"
 	// OPTIONS http method reference
 	OPTIONS = "OPTIONS"
-	// PATCH http method reference
-	PATCH = "PATCH"
 	// DELETE http method reference
 	DELETE = "DELETE"
+	// PUT http method reference
+	PUT = "PUT"
+	// PATCH http method reference
+	PATCH = "PATCH"
+	// HEAD http method reference
+	HEAD = "HEAD"
 )
 
 // defaultResponse404 is returned if the server is unable to render the response
