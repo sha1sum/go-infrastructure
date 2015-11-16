@@ -177,12 +177,6 @@ func (input *Input) ParamByName(key string) string {
 	return ""
 }
 
-// Query returns the value for a query param by name.
-func (input *Input) Query(key string) string {
-	input.Request.ParseForm()
-	return input.Request.Form.Get(key)
-}
-
 // Cookie returns the provided cookie by name.
 // If the cookie does not exist an empty string is returned.
 func (input *Input) Cookie(key string) string {
