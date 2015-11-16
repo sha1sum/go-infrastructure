@@ -16,32 +16,32 @@ type (
 	// ensures documentation is kept current.
 	HandlerDef struct {
 		// A string to name the handler
-		Alias string `json:"alias"`
+		Alias string `json:"alias,omitempty"`
 		// The method to interact with the handler (i.e. GET or POST)
-		Method string `json:"method"`
+		Method string `json:"method,omitempty"`
 		// The URL Path to access the handler
-		Path string `json:"path"`
+		Path string `json:"path,omitempty"`
 		// The location of a HTML file describing the HandlerDef behavior in detail.
-		Documentation         string `json:"documentationURL"`
-		DocumentationMarkdown string `json:"documentationMarkdown"`
+		Documentation         string `json:"documentationURL,omitempty"`
+		DocumentationMarkdown string `json:"documentationMarkdown,omitempty"`
 		// The maximum time this HandlerFunc should take to process. This information is useful for performance testing.
-		DurationExpectation string `json:"duration"`
+		DurationExpectation string `json:"duration,omitempty"`
 		// An optional structure containing input parameters for the HandlerFunc.
-		Params        interface{} `json:"params"`
-		ParamsExample interface{} `json:"paramsExample"`
+		Params        interface{} `json:"params,omitempty"`
+		ParamsExample interface{} `json:"paramsExample,omitempty"`
 		// An optional reference to a structure containing output for successful HandlerFunc calls.
 		Response        interface{} `json:"-"`
-		ResponseExample interface{} `json:"responseExample"`
+		ResponseExample interface{} `json:"responseExample,omitempty"`
 		// An optional reference to a map describing response headers expected from the HandlerFunc.
-		ResponseHeaders map[string]string `json:"responseHeaders"`
+		ResponseHeaders map[string]string `json:"responseHeaders,omitempty"`
 		// An optional reference to a map describing required request headers of the HandlerFunc.
-		RequestHeaders map[string]string `json:"requestHeaders"`
+		RequestHeaders map[string]string `json:"requestHeaders,omitempty"`
 		// The handler to register
 		Handler HandlerFunc `json:"-"`
 		// A chain of handlers to process before executing the primary HandlerFunc
-		PreHandlers []HandlerDef `json:"prehandlers"`
+		PreHandlers []HandlerDef `json:"prehandlers,omitempty"`
 		// A chain of handlers to process after executing the primary HandlerFunc
-		PostHandlers []HandlerDef `json:"posthandlers"`
+		PostHandlers []HandlerDef `json:"posthandlers,omitempty"`
 	}
 )
 
