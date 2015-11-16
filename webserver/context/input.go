@@ -2,6 +2,7 @@ package context
 
 import (
 	"bytes"
+	"encoding/json"
 	"io/ioutil"
 	"net/http"
 	"strconv"
@@ -10,6 +11,12 @@ import (
 	"github.com/julienschmidt/httprouter"
 )
 
+// Params is a collecton of Param.
+type Params struct {
+	Values []Param
+}
+
+// Param is a simple Key/Value structure
 type Param struct {
 	Key   string
 	Value string
@@ -166,7 +173,24 @@ func (input *Input) UserAgent() string {
 	return input.Header("User-Agent")
 }
 
-// Param returns a route param by a given key.
+// MarshalFromQuery ...
+func (input *Input) MarshalFromQuery(data interface{}, tagname string) error {
+	values := input.Request.URL.Query()
+
+	m := make(map[string]string)
+	for k, v := range values {
+		m[k] = v[0]
+	}
+
+	content, err := json.Marshal(m)
+	if err != nil {
+		return err
+	}
+
+	return json.Unmarshal(content, data)
+}
+
+// ParamByName returns a route param by a given key.
 func (input *Input) ParamByName(key string) string {
 	for _, v := range input.Params {
 		if v.Key == key {
