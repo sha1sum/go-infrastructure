@@ -19,9 +19,16 @@ import (
 )
 
 const (
-	GET     = "GET"
-	POST    = "POST"
+	// GET http method reference
+	GET = "GET"
+	// POST http method reference
+	POST = "POST"
+	// OPTIONS http method reference
 	OPTIONS = "OPTIONS"
+	// PATCH http method reference
+	PATCH = "PATCH"
+	// DELETE http method reference
+	DELETE = "DELETE"
 )
 
 // defaultResponse404 is returned if the server is unable to render the response

@@ -22,13 +22,16 @@ type (
 		// The URL Path to access the handler
 		Path string
 		// The location of a HTML file describing the HandlerDef behavior in detail.
-		Documentation string
+		Documentation         string
+		DocumentationMarkdown string
 		// The maximum time this HandlerFunc should take to process. This information is useful for performance testing.
 		DurationExpectation string
-		// An optional reference to a structure containing input parameters for the HandlerFunc.
-		Params interface{}
+		// An optional structure containing input parameters for the HandlerFunc.
+		Params        interface{}
+		ParamsExample interface{}
 		// An optional reference to a structure containing output for successful HandlerFunc calls.
-		Response interface{}
+		Response        interface{}
+		ResponseExample interface{}
 		// An optional reference to a map describing response headers expected from the HandlerFunc.
 		ResponseHeaders map[string]string
 		// An optional reference to a map describing required request headers of the HandlerFunc.
