@@ -16,32 +16,32 @@ type (
 	// ensures documentation is kept current.
 	HandlerDef struct {
 		// A string to name the handler
-		Alias string
+		Alias string `json:"alias"`
 		// The method to interact with the handler (i.e. GET or POST)
-		Method string
+		Method string `json:"method"`
 		// The URL Path to access the handler
-		Path string
+		Path string `json:"path"`
 		// The location of a HTML file describing the HandlerDef behavior in detail.
-		Documentation         string
-		DocumentationMarkdown string
+		Documentation         string `json:"method"`
+		DocumentationMarkdown string `json:"method"`
 		// The maximum time this HandlerFunc should take to process. This information is useful for performance testing.
-		DurationExpectation string
+		DurationExpectation string `json:"method"`
 		// An optional structure containing input parameters for the HandlerFunc.
-		Params        interface{}
-		ParamsExample interface{}
+		Params        interface{} `json:"method"`
+		ParamsExample interface{} `json:"method"`
 		// An optional reference to a structure containing output for successful HandlerFunc calls.
-		Response        interface{}
-		ResponseExample interface{}
+		Response        interface{} `json:"method"`
+		ResponseExample interface{} `json:"method"`
 		// An optional reference to a map describing response headers expected from the HandlerFunc.
-		ResponseHeaders map[string]string
+		ResponseHeaders map[string]string `json:"method"`
 		// An optional reference to a map describing required request headers of the HandlerFunc.
-		RequestHeaders map[string]string
+		RequestHeaders map[string]string `json:"method"`
 		// The handler to register
-		Handler HandlerFunc
+		Handler HandlerFunc `json:"-"`
 		// A chain of handlers to process before executing the primary HandlerFunc
-		PreHandlers []HandlerDef
+		PreHandlers []HandlerDef `json:"prehandlers"`
 		// A chain of handlers to process after executing the primary HandlerFunc
-		PostHandlers []HandlerDef
+		PostHandlers []HandlerDef `json:"posthandlers"`
 	}
 )
 
