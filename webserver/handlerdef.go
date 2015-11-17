@@ -3,6 +3,7 @@ package webserver
 import (
 	"strings"
 
+	"github.com/go-gia/go-infrastructure/logger"
 	"github.com/go-gia/go-infrastructure/webserver/context"
 )
 
@@ -26,12 +27,16 @@ type (
 		DocumentationMarkdown string `json:"documentationMarkdown,omitempty"`
 		// The maximum time this HandlerFunc should take to process. This information is useful for performance testing.
 		DurationExpectation string `json:"duration,omitempty"`
-		// An optional structure containing input parameters for the HandlerFunc.
+		// An optional structure containing search/query parameters for the
+		// HandlerFunc.
 		Params        interface{} `json:"params,omitempty"`
 		ParamsExample interface{} `json:"paramsExample,omitempty"`
-		// An optional reference to a structure containing output for successful HandlerFunc calls.
-		Response        interface{} `json:"-"`
-		ResponseExample interface{} `json:"responseExample,omitempty"`
+		// An optional structure documenting the request body supported.
+		RequestBody        interface{} `json:"request,omitempty"`
+		RequestBodyExample interface{} `json:"requestExample,omitempty"`
+		// An optional structure documenting the response body.
+		ResponseBody        interface{} `json:"-"`
+		ResponseBodyExample interface{} `json:"responseExample,omitempty"`
 		// An optional reference to a map describing response headers expected from the HandlerFunc.
 		ResponseHeaders map[string]string `json:"responseHeaders,omitempty"`
 		// An optional reference to a map describing required request headers of the HandlerFunc.
@@ -81,18 +86,21 @@ func (s *Server) RegisterHandlerDef(h HandlerDef) {
 
 	// Register
 	switch h.Method {
-	case "HEAD":
+	case HEAD:
 		fallthrough
-	case "GET":
+	case GET:
 		fallthrough
-	case "PUT":
+	case PUT:
 		fallthrough
-	case "DELETE":
+	case DELETE:
 		fallthrough
-	case "OPTIONS":
+	case OPTIONS:
 		fallthrough
-	case "POST":
+	case PATCH:
+		fallthrough
+	case POST:
 		s.Handle(h.Method, h.Path, chain)
+
 	case "":
 	// do nothing--middleware only
 	default:
@@ -107,41 +115,47 @@ func (s *Server) RegisterHandlerDef(h HandlerDef) {
 }
 
 type optionsMetadata struct {
-	Get            bool
-	Put            bool
-	Post           bool
-	Delete         bool
-	Head           bool
+	get            bool
+	put            bool
+	post           bool
+	delete         bool
+	head           bool
+	patch          bool
 	RequestHeaders map[string]string
 }
 
 // RegisterHandlerDefsAndOptions accepts a slice of HandlerDefs and registers
-// each unique route and then after all the routes have been determined, creates
-// new HandlerDefs with the OPTIONS method for each unique route.
+// each unique route. After all the routes have been determined it then creates
+// new HandlerDefs to create OPTIONS methods for each unique route. The created
+// OPTIONS handlers read the `HandlerDef.RequestHeaders` and tell the client
+// that they
 func (s *Server) RegisterHandlerDefsAndOptions(h []HandlerDef) error {
+
 	optionsMap := map[string]optionsMetadata{}
-	defaultHeaders := make(map[string]map[string]string)
-	// Let's loop through all the HandlerDefs and get collect methods / paths
+	headers := make(map[string]map[string]string)
+
+	// Loop through all the HandlerDefs and collect methods / paths.
 	for _, hd := range h {
 		if _, pathExists := optionsMap[hd.Path]; !pathExists {
 			optionsMap[hd.Path] = optionsMetadata{}
-			defaultHeaders[hd.Path] = hd.RequestHeaders
+			headers[hd.Path] = hd.RequestHeaders
 		}
 
 		// Open up the current route
 		o := optionsMap[hd.Path]
-		o.Get = strings.ToUpper(hd.Method) == "GET"
-		o.Post = strings.ToUpper(hd.Method) == "POST"
-		o.Put = strings.ToUpper(hd.Method) == "PUT"
-		o.Delete = strings.ToUpper(hd.Method) == "DELETE"
-		o.Head = strings.ToUpper(hd.Method) == "HEAD"
+		o.get = strings.ToUpper(hd.Method) == GET
+		o.post = strings.ToUpper(hd.Method) == POST
+		o.put = strings.ToUpper(hd.Method) == PUT
+		o.delete = strings.ToUpper(hd.Method) == DELETE
+		o.head = strings.ToUpper(hd.Method) == HEAD
+		o.patch = strings.ToUpper(hd.Method) == PATCH
 
-		if len(hd.RequestHeaders) != len(defaultHeaders[hd.Path]) {
+		if len(hd.RequestHeaders) != len(headers[hd.Path]) {
 			return ErrWebserverRequestHeaderCountWrong
 		}
 
 		if len(hd.RequestHeaders) > 0 {
-			for key, value := range defaultHeaders[hd.Path] {
+			for key, value := range headers[hd.Path] {
 				if _, ok := hd.RequestHeaders[key]; ok {
 					if hd.RequestHeaders[key] != value {
 						return ErrWebserverRequestHeaderMismatch
@@ -154,6 +168,8 @@ func (s *Server) RegisterHandlerDefsAndOptions(h []HandlerDef) error {
 
 		optionsMap[hd.Path] = o
 	}
+
+	s.logger.Context(logger.Fields{"opts": optionsMap}).Debug("Ops Map")
 
 	// // Now let's add to the end of the incoming HandlerDefs
 	for route, meta := range optionsMap {
@@ -169,19 +185,19 @@ func (s *Server) RegisterHandlerDefsAndOptions(h []HandlerDef) error {
 
 func createOption(path string, meta optionsMetadata) HandlerDef {
 	methods := []string{}
-	if meta.Get {
+	if meta.get {
 		methods = append(methods, "GET")
 	}
-	if meta.Put {
+	if meta.put {
 		methods = append(methods, "PUT")
 	}
-	if meta.Post {
+	if meta.post {
 		methods = append(methods, "POST")
 	}
-	if meta.Delete {
+	if meta.delete {
 		methods = append(methods, "DELETE")
 	}
-	if meta.Head {
+	if meta.head {
 		methods = append(methods, "HEAD")
 	}
 
