@@ -3,7 +3,6 @@ package webserver
 import (
 	"strings"
 
-	"github.com/go-gia/go-infrastructure/logger"
 	"github.com/go-gia/go-infrastructure/webserver/context"
 )
 
@@ -168,8 +167,6 @@ func (s *Server) RegisterHandlerDefsAndOptions(h []HandlerDef) error {
 
 		optionsMap[hd.Path] = o
 	}
-
-	s.logger.Context(logger.Fields{"opts": optionsMap}).Debug("Ops Map")
 
 	// // Now let's add to the end of the incoming HandlerDefs
 	for route, meta := range optionsMap {
