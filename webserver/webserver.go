@@ -217,7 +217,7 @@ func (s *Server) onMissingHandler(w http.ResponseWriter, req *http.Request) {
 }
 
 // Handle registers HandlerFuncs with the webserver.
-func (s *Server) Handle(method string, path string, handlers []HandlerFunc) {
+func (s *Server) Handle(method string, path string, handlers []HandlerFunc, postHandlers []HandlerFunc) {
 	router, ok := s.methodRouters[method]
 	if !ok {
 		router = httprouter.New()
@@ -227,11 +227,20 @@ func (s *Server) Handle(method string, path string, handlers []HandlerFunc) {
 	router.Handle(method, path, func(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
 		event := s.captureRequest(w, req, params, handlers)
 
+		// Run through our handler chain.
 		for _, h := range handlers {
 			if event.BreakHandlerChain {
 				break
 			}
 			h(event)
+		}
+
+		// Run through any post handlers. These are not allowed to write
+		// to the client.
+		if postHandlers != nil {
+			for _, h := range postHandlers {
+				h(event)
+			}
 		}
 	})
 }
@@ -253,15 +262,15 @@ func (s *Server) FILES(url string, path string) {
 
 // GET is a convenience method for registering handlers
 func (s *Server) GET(path string, handlers ...HandlerFunc) {
-	s.Handle("GET", path, handlers)
+	s.Handle("GET", path, handlers, nil)
 }
 
 // POST is a convenience method for registering handlers
 func (s *Server) POST(path string, handlers ...HandlerFunc) {
-	s.Handle("POST", path, handlers)
+	s.Handle("POST", path, handlers, nil)
 }
 
 // PUT is a convenience method for registering handlers
 func (s *Server) PUT(path string, handlers ...HandlerFunc) {
-	s.Handle("PUT", path, handlers)
+	s.Handle("PUT", path, handlers, nil)
 }

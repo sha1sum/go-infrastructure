@@ -71,6 +71,7 @@ func (s *Server) RegisterHandlerDefs(h []HandlerDef) error {
 // webserver.
 func (s *Server) RegisterHandlerDef(h HandlerDef) {
 	chain := []HandlerFunc{}
+	postChain := []HandlerFunc{}
 
 	// Pre
 	for _, a := range h.PreHandlers {
@@ -78,9 +79,9 @@ func (s *Server) RegisterHandlerDef(h HandlerDef) {
 	}
 	// Target
 	chain = append(chain, h.Handler)
-	// Post
+
 	for _, a := range h.PostHandlers {
-		chain = append(chain, a.Handler)
+		postChain = append(postChain, a.Handler)
 	}
 
 	// Register
@@ -98,7 +99,7 @@ func (s *Server) RegisterHandlerDef(h HandlerDef) {
 	case PATCH:
 		fallthrough
 	case POST:
-		s.Handle(h.Method, h.Path, chain)
+		s.Handle(h.Method, h.Path, chain, postChain)
 
 	case "":
 	// do nothing--middleware only
