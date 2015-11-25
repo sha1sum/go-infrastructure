@@ -6,7 +6,6 @@ import (
 	"github.com/go-gia/go-infrastructure/webserver/render"
 
 	"github.com/davecgh/go-spew/spew"
-	"github.com/julienschmidt/httprouter"
 )
 
 // Context is created on every request and models the event, or request.
@@ -33,16 +32,10 @@ type Context struct {
 }
 
 // New produces a new request context event.
-func New(w http.ResponseWriter, req *http.Request, params httprouter.Params) *Context {
+func New(w http.ResponseWriter, req *http.Request) *Context {
 	var c = new(Context)
 
-	p := make([]Param, len(params), len(params))
-
-	for i, v := range params {
-		p[i] = Param{Key: v.Key, Value: v.Value}
-	}
-
-	c.Input = NewInput(req, p)
+	c.Input = NewInput(req)
 	c.Output = NewOutput(c)
 	c.Request = req
 	c.ResponseWriter = w
@@ -56,7 +49,7 @@ func New(w http.ResponseWriter, req *http.Request, params httprouter.Params) *Co
 }
 
 // *****************************************************************************
-// Handling Conveinence
+// Handling Convenience
 // *****************************************************************************
 
 // BadRequest issues a bad request

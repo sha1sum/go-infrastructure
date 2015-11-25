@@ -15,7 +15,7 @@ import (
 	"github.com/go-gia/go-infrastructure/logger"
 	"github.com/go-gia/go-infrastructure/webserver/context"
 	"github.com/go-gia/go-infrastructure/webserver/render"
-	"github.com/julienschmidt/httprouter"
+	"github.com/gorilla/mux"
 )
 
 const (
@@ -44,7 +44,7 @@ type (
 	// Server represents an instance of the webserver.
 	Server struct {
 		contextPool   sync.Pool
-		methodRouters map[string]*httprouter.Router
+		methodRouters map[string]*mux.Router
 
 		MissingHandler []HandlerFunc
 
@@ -107,12 +107,12 @@ func New(
 	s := &Server{
 		logger:        logger,
 		HandlerDef:    make(map[string]HandlerDef),
-		methodRouters: make(map[string]*httprouter.Router),
+		methodRouters: make(map[string]*mux.Router),
 	}
 
 	// Be sure to setup at least one router. Additional method routers
 	// can be defined when HandlerFuncs are registered.
-	s.methodRouters[GET] = httprouter.New()
+	s.methodRouters[GET] = mux.NewRouter()
 
 	// TODO We need to reset a default missing handler
 	// s.router.NotFound = s.onMissingHandler
@@ -185,10 +185,9 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 func (s *Server) captureRequest(
 	w http.ResponseWriter,
 	req *http.Request,
-	params httprouter.Params,
 	handlers []HandlerFunc) *context.Context {
 
-	event := context.New(w, req, params)
+	event := context.New(w, req)
 
 	return event
 }
@@ -196,7 +195,7 @@ func (s *Server) captureRequest(
 // onMissingHandler replies to the request with an HTTP 404 not found error.
 // This function is triggered when we are unable to match a route.
 func (s *Server) onMissingHandler(w http.ResponseWriter, req *http.Request) {
-	context := s.captureRequest(w, req, nil, s.MissingHandler)
+	context := s.captureRequest(w, req, s.MissingHandler)
 
 	context.Output.Status = http.StatusNotFound
 
@@ -220,14 +219,14 @@ func (s *Server) onMissingHandler(w http.ResponseWriter, req *http.Request) {
 func (s *Server) Handle(method string, path string, handlers []HandlerFunc, postHandlers []HandlerFunc) {
 	router, ok := s.methodRouters[method]
 	if !ok {
-		router = httprouter.New()
+		router = mux.NewRouter()
 		s.methodRouters[method] = router
 	}
+	s.logger.Context(logger.Fields{"method": method, "path": path}).Debug("Registering Route")
 
-	router.Handle(method, path, func(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
-		event := s.captureRequest(w, req, params, handlers)
-
-		// Run through our handler chain.
+	router.HandleFunc(path, func(w http.ResponseWriter, req *http.Request) {
+		event := s.captureRequest(w, req, handlers)
+		// Run through our handler chain
 		for _, h := range handlers {
 			if event.BreakHandlerChain {
 				break
@@ -242,7 +241,7 @@ func (s *Server) Handle(method string, path string, handlers []HandlerFunc, post
 				h(event)
 			}
 		}
-	})
+	}).Methods(method)
 }
 
 // FILES registers a url and directory path to serve static files. The webserver

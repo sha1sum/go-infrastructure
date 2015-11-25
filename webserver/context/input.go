@@ -8,10 +8,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/julienschmidt/httprouter"
+	"github.com/gorilla/mux"
 )
 
-// Params is a collecton of Param.
 type Params struct {
 	Values []Param
 }
@@ -29,15 +28,12 @@ type Input struct {
 	Format      string // html, xml, json, plain, etc...
 	RequestBody []byte
 	Request     *http.Request
-
-	routerparams httprouter.Params
 }
 
 // NewInput returns a new Webserver/context Input struct that provides
 // useful behavior for working with HTTP requests.
-func NewInput(req *http.Request, params []Param) *Input {
+func NewInput(req *http.Request) *Input {
 	return &Input{
-		Params:  params,
 		Request: req,
 	}
 }
@@ -190,12 +186,14 @@ func (input *Input) MarshalFromQuery(data interface{}, tagname string) error {
 	return json.Unmarshal(content, data)
 }
 
-// ParamByName returns a route param by a given key.
+// Param returns a route param by a given key.
 func (input *Input) ParamByName(key string) string {
-	for _, v := range input.Params {
-		if v.Key == key {
-			return v.Value
-		}
+
+	vars := mux.Vars(input.Request)
+
+	value, ok := vars[key]
+	if ok {
+		return value
 	}
 
 	return ""
