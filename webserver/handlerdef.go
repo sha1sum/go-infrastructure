@@ -197,22 +197,22 @@ func (s *Server) RegisterHandlerDefsAndOptions(h []HandlerDef) error {
 func createOption(path string, meta optionsMetadata) HandlerDef {
 	methods := []string{}
 	if meta.get {
-		methods = append(methods, "GET")
+		methods = append(methods, GET)
 	}
 	if meta.put {
-		methods = append(methods, "PUT")
+		methods = append(methods, PUT)
 	}
 	if meta.post {
-		methods = append(methods, "POST")
+		methods = append(methods, POST)
 	}
 	if meta.delete {
-		methods = append(methods, "DELETE")
+		methods = append(methods, DELETE)
 	}
 	if meta.head {
-		methods = append(methods, "HEAD")
+		methods = append(methods, HEAD)
 	}
 	if meta.patch {
-		methods = append(methods, "PATCH")
+		methods = append(methods, PATCH)
 	}
 
 	return HandlerDef{
