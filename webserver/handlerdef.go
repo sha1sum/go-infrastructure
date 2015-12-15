@@ -1,6 +1,8 @@
 package webserver
 
 import (
+	"encoding/json"
+	"fmt"
 	"strings"
 
 	"github.com/go-gia/go-infrastructure/webserver/context"
@@ -143,12 +145,20 @@ func (s *Server) RegisterHandlerDefsAndOptions(h []HandlerDef) error {
 
 		// Open up the current route
 		o := optionsMap[hd.Path]
-		o.get = strings.ToUpper(hd.Method) == GET
-		o.post = strings.ToUpper(hd.Method) == POST
-		o.put = strings.ToUpper(hd.Method) == PUT
-		o.delete = strings.ToUpper(hd.Method) == DELETE
-		o.head = strings.ToUpper(hd.Method) == HEAD
-		o.patch = strings.ToUpper(hd.Method) == PATCH
+		switch strings.ToUpper(hd.Method) {
+		case GET:
+			o.get = true
+		case POST:
+			o.post = true
+		case PUT:
+			o.put = true
+		case DELETE:
+			o.delete = true
+		case HEAD:
+			o.head = true
+		case PATCH:
+			o.patch = true
+		}
 
 		if len(hd.RequestHeaders) != len(headers[hd.Path]) {
 			return ErrWebserverRequestHeaderCountWrong
@@ -168,6 +178,9 @@ func (s *Server) RegisterHandlerDefsAndOptions(h []HandlerDef) error {
 
 		optionsMap[hd.Path] = o
 	}
+
+	j, _ := json.Marshal(optionsMap)
+	fmt.Printf("The JSON is \n\n%s\n\n", j)
 
 	// // Now let's add to the end of the incoming HandlerDefs
 	for route, meta := range optionsMap {
@@ -197,6 +210,9 @@ func createOption(path string, meta optionsMetadata) HandlerDef {
 	}
 	if meta.head {
 		methods = append(methods, "HEAD")
+	}
+	if meta.patch {
+		methods = append(methods, "PATCH")
 	}
 
 	return HandlerDef{
