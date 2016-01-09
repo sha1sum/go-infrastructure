@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/go-gia/go-infrastructure/webserver/context"
+	openapi "github.com/sha1sum/golang-openapi"
 )
 
 type (
@@ -24,10 +25,14 @@ type (
 		// The URL Path to access the handler
 		Path string `json:"path,omitempty"`
 		// The location of a HTML file describing the HandlerDef behavior in detail.
-		Documentation         string `json:"documentationURL,omitempty"`
+		Documentation string `json:"documentationURL,omitempty"`
+		// DocumentationMarkdown defines a description for the handler and takes markdown format
 		DocumentationMarkdown string `json:"documentationMarkdown,omitempty"`
 		// The maximum time this HandlerFunc should take to process. This information is useful for performance testing.
 		DurationExpectation string `json:"duration,omitempty"`
+		// OpenAPIParams is a list of parameters which the handler can accept
+		OpenAPIParams    []openapi.Parameter `json:"openAPIParams,omitempty"`
+		OpenAPIResponses openapi.Responses   `json:"openAPIResponses,omitempty"`
 		// An optional structure containing search/query parameters for the
 		// HandlerFunc.
 		Params        interface{} `json:"params,omitempty"`
@@ -48,6 +53,10 @@ type (
 		PreHandlers []HandlerDef `json:"prehandlers,omitempty"`
 		// A chain of handlers to process after executing the primary HandlerFunc
 		PostHandlers []HandlerDef `json:"posthandlers,omitempty"`
+		// Summary is a short title for the handler
+		Summary string `json:"summary,omitempty"`
+		// Tags is a list of tags used for API documentation
+		Tags []string `json:"tags,omitempty"`
 	}
 )
 
@@ -225,5 +234,16 @@ func createOption(path string, meta optionsMetadata) HandlerDef {
 			}
 			c.Output.Body([]byte{})
 		},
+	}
+}
+
+// ToOpenAPI returns an string with the path, HTTP verb, and OpenAPI request
+func (h HandlerDef) ToOpenAPI() (path string, verb string, req openapi.Request) {
+	return h.Path, strings.ToLower(h.Method), openapi.Request{
+		Summary:     h.Summary,
+		Description: h.DocumentationMarkdown,
+		Parameters:  h.OpenAPIParams,
+		Tags:        h.Tags,
+		Responses:   h.OpenAPIResponses,
 	}
 }
