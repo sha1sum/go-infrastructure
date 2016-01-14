@@ -31,8 +31,9 @@ type (
 		// The maximum time this HandlerFunc should take to process. This information is useful for performance testing.
 		DurationExpectation string `json:"duration,omitempty"`
 		// OpenAPIParams is a list of parameters which the handler can accept
-		OpenAPIParams    []openapi.Parameter `json:"openAPIParams,omitempty"`
-		OpenAPIResponses openapi.Responses   `json:"openAPIResponses,omitempty"`
+		OpenAPIParams []openapi.Parameter `json:"openAPIParams,omitempty"`
+		// OpenAPIResponses is a map of http error codes as strings with their Response
+		OpenAPIResponses map[string]openapi.Response `json:"openAPIResponses,omitempty"`
 		// An optional structure containing search/query parameters for the
 		// HandlerFunc.
 		Params        interface{} `json:"params,omitempty"`
