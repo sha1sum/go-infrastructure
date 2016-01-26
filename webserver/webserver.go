@@ -12,9 +12,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/go-gia/go-infrastructure/logger"
-	"github.com/go-gia/go-infrastructure/webserver/context"
-	"github.com/go-gia/go-infrastructure/webserver/render"
+	"bitbucket.org/powerchord/platform/vendor/github.com/go-gia/go-infrastructure/logger"
+	"bitbucket.org/powerchord/platform/vendor/github.com/go-gia/go-infrastructure/webserver/context"
+	"bitbucket.org/powerchord/platform/vendor/github.com/go-gia/go-infrastructure/webserver/render"
 	"github.com/gorilla/mux"
 )
 
@@ -38,7 +38,48 @@ const (
 // defaultResponse404 is returned if the server is unable to render the response
 // using the configured SystemTemplate. This can happen if a template file does not
 // exist at the configured path.
-const defaultResponse404 = `<html><head><title>404 Not Found</title><style>body{background-color:black;color:white;margin:20%;}</style></head><body><center><h1>404 Not Found</h1></center></body></html>`
+const defaultResponse404 = `
+<html>
+  <head>
+    <title>404 Not Found</title>
+    <style>
+      body {
+        background-color:black;
+        color:white;
+        margin:20%;
+      }
+    </style>
+  </head>
+
+  <body>
+    <center>
+      <h1>404 Not Found</h1>
+    </center>
+  </body>
+</html>`
+
+// defaultResponse404 is returned if the server is unable to render the response
+// using the configured SystemTemplate. This can happen if a template file does not
+// exist at the configured path.
+const defaultResponseDirectoryListingForbidden = `
+<html>
+  <head>
+    <title>403 Forbidden</title>
+    <style>
+      body {
+        background-color:black;
+        color:white;
+        margin:20%;
+      }
+    </style>
+  </head>
+
+  <body>
+    <center>
+      <h1>Directory Listing Forbidden</h1>
+    </center>
+  </body>
+</html>`
 
 type (
 	// Server represents an instance of the webserver.
@@ -46,7 +87,8 @@ type (
 		contextPool   sync.Pool
 		methodRouters map[string]*mux.Router
 
-		MissingHandler []HandlerFunc
+		MissingHandler                   []HandlerFunc
+		DirectoryListingForbiddenHandler []HandlerFunc
 
 		// HandlerDef maintains a map of all registered handler definitions
 		HandlerDef      map[string]HandlerDef
@@ -91,6 +133,9 @@ var (
 	}
 	// If we fail to find a configured onMissingHandler once we will stop looking
 	seekOnMissingHandler = true
+	// If we fail to find a configured onDirectoryListingForbiddenHandler once we
+	// will stop looking
+	seekOnDirectoryListingForbiddenHandler = true
 
 	// ErrWebserverDuplicateMethod is thrown when there's a route that has duplicate methods (read: Two PUT requests on the same route)
 	ErrWebserverDuplicateMethod = errors.New("Duplicate Method on a route.")
@@ -98,6 +143,14 @@ var (
 	ErrWebserverRequestHeaderCountWrong = errors.New("The current route doesn't have the same number of RequestHeaders as a previous route header.")
 	// ErrWebserverRequestHeaderMismatch is thrown when the request header of a route doesn't match a request header of another route.
 	ErrWebserverRequestHeaderMismatch = errors.New("The routes have RequestHeaders mismatch. For similiar routes, all the verbs should use the same RequestHeaders.")
+
+	// IndexFiles list suitable index HTML files for static directories
+	IndexFiles = [4]string{
+		"index.html",
+		"index.htm",
+		"default.html",
+		"default.htm",
+	}
 )
 
 // New returns a new WebServer.
@@ -151,9 +204,28 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 					s.onMissingHandler(w, req)
 					return
 				}
-				// TODO: Serve Directory Listing? Throw a 403 Forbidden Error? Defaulting to 404 is probably not robust enough for our web server
+				// If the path requested is a directory, then search for an index file
+				// and serve a 403 Forbidden error if a suitable index file does not
+				// exist.
 				if fileInfo.IsDir() {
-					s.onMissingHandler(w, req)
+					if !strings.HasSuffix(filePath, "/") {
+						http.Redirect(w, req, requestPath+"/", http.StatusMovedPermanently)
+						return
+					}
+					var indexPath string
+					foundIndex := false
+					for _, indexFileName := range IndexFiles {
+						indexPath = filePath + indexFileName
+						_, err := os.Stat(indexPath)
+						if err == nil {
+							foundIndex = true
+							filePath = indexPath
+							break
+						}
+					}
+					if !foundIndex {
+						s.onDirectoryListingForbiddenHandler(w, req)
+					}
 				}
 
 				s.logger.Context(logger.Fields{"filepath": filePath, "requestPath": requestPath}).Debug("Serving static file")
@@ -212,6 +284,37 @@ func (s *Server) onMissingHandler(w http.ResponseWriter, req *http.Request) {
 
 	if !seekOnMissingHandler {
 		context.Output.Body([]byte(defaultResponse404))
+	}
+}
+
+// onDirectoryListingForbiddenHandler replies to the request with an HTTP 403
+// forbidden error. This function is triggered when a static path was
+// requested, but the path is a directory without a suitable index file
+func (s *Server) onDirectoryListingForbiddenHandler(w http.ResponseWriter,
+	req *http.Request) {
+	context := s.captureRequest(w, req, s.DirectoryListingForbiddenHandler)
+
+	context.Output.Status = http.StatusForbidden
+
+	s.logger.Context(logger.Fields{
+		"method":      req.Method,
+		"requestPath": req.URL.Path,
+		"statusCode":  403,
+	}).Debug("Directory listing forbidden")
+
+	if seekOnDirectoryListingForbiddenHandler {
+		template := Settings.SystemTemplates["onDirectoryListingForbiddenHandler"]
+		err := context.HTMLTemplate(template, nil)
+		if err != nil {
+			s.logger.Context(logger.Fields{
+				"template": template,
+			}).Warn("Failed single attempt to load configured onDirectoryListingForbiddenHandler template--serving default response")
+			seekOnDirectoryListingForbiddenHandler = false
+		}
+	}
+
+	if !seekOnDirectoryListingForbiddenHandler {
+		context.Output.Body([]byte(defaultResponseDirectoryListingForbidden))
 	}
 }
 
