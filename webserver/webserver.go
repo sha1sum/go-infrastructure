@@ -12,9 +12,9 @@ import (
 	"sync"
 	"time"
 
-	"bitbucket.org/powerchord/platform/vendor/github.com/go-gia/go-infrastructure/logger"
-	"bitbucket.org/powerchord/platform/vendor/github.com/go-gia/go-infrastructure/webserver/context"
-	"bitbucket.org/powerchord/platform/vendor/github.com/go-gia/go-infrastructure/webserver/render"
+	"github.com/go-gia/go-infrastructure/logger"
+	"github.com/go-gia/go-infrastructure/webserver/context"
+	"github.com/go-gia/go-infrastructure/webserver/render"
 	"github.com/gorilla/mux"
 )
 
