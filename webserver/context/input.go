@@ -199,6 +199,11 @@ func (input *Input) ParamByName(key string) string {
 	return ""
 }
 
+// GetPathParams returns a map of the path/route parameters in the request
+func (input *Input) GetPathParams() map[string]string {
+	return mux.Vars(input.Request)
+}
+
 // Cookie returns the provided cookie by name.
 // If the cookie does not exist an empty string is returned.
 func (input *Input) Cookie(key string) string {
