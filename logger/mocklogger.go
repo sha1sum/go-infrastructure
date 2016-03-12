@@ -1,5 +1,4 @@
 package logger
-
 // NewLogMock returns a new mock logger
 func NewLogMock(settings Settings) (*MockLog, error) {
 	mockLog := &MockLog{}
@@ -53,6 +52,9 @@ type MockLog struct {
 
 // Flush inside mock logger
 func (l *MockLog) Flush() {}
+
+// Trace inside mock logger
+func (l *MockLog) Trace(title string, args ...interface{}) {}
 
 // Debug inside mock logger
 func (l *MockLog) Debug(args ...interface{}) {}
